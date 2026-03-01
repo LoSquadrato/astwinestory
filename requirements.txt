@@ -1,0 +1,8 @@
+# Core
+pydantic>=2.0           # type validation sulle dataclass AST
+
+# CLI
+rich>=13.0              # formatting terminale: colori, tabelle, syntax highlighting
+
+# Test
+pytest>=8.0             # test runner
