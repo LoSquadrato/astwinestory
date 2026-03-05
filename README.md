@@ -402,6 +402,7 @@ Runs after `FileLoader`, before full parsing.
 
 Checks only:
 
+* `StoryTitle` block exists
 * `StoryData` block exists
 * Contains `ifid`, `format`, `format-version`, `start`
 * `start` passage exists
