@@ -1,4 +1,6 @@
+import uuid
 from dataclasses import dataclass 
+from core.parser.formats import TweeFormat, SUPPORTED_FORMAT_VERSIONS
 
 @dataclass 
 class ValidationResult: 
@@ -8,6 +10,7 @@ class ValidationResult:
     @property 
     def is_valid(self) -> bool: 
         return not self.errors
+    
     
 class StoryValidator: 
     @staticmethod 
@@ -19,36 +22,46 @@ class StoryValidator:
             errors.append("Missing start node") 
         if not data.get("format"): 
             errors.append("Missing format") 
-            return errors 
+        return errors 
         
     @staticmethod   
     def validate_semantics(data: dict) -> tuple[list[str], list[str]]: 
         errors = [] 
-        warnings = [] # IFID UUID check 
+        warnings = []
         if "ifid" in data: 
             try: 
                 uuid.UUID(data["ifid"]) 
             except Exception: 
                 errors.append("Invalid IFID (must be valid UUID)") 
-    # Format enum check 
+        if "format" in data:
             try: 
-                StoryFormat(data["format"]) 
+                TweeFormat(data["format"]) 
             except Exception: 
-                errors.append(f"Unsupported format '{data.get('format')}'") 
-    # Format-version check 
-            fmt = data.get("format") 
-            version = data.get("format-version") 
-            
-            if fmt in SUPPORTED_FORMAT_VERSIONS: 
-                if version not in SUPPORTED_FORMAT_VERSIONS[fmt]: 
-                    warnings.append( 
-                        f"Format-version '{version}' not officially supported for '{fmt}'" 
-                    ) 
-            
-            return errors, warnings 
+                errors.append(f"Unsupported format '{data.get('format')}'")
+        fmt = data.get("format") 
+        version = data.get("format-version")
+                        
+        if fmt in SUPPORTED_FORMAT_VERSIONS: 
+            if version not in SUPPORTED_FORMAT_VERSIONS[fmt]: 
+                warnings.append( 
+                    f"{fmt}: {version} not officially supported, there may be issues" 
+                ) 
+        return errors, warnings 
         
+    @staticmethod    
+    def validate_reference(data: dict, passages_list: list[str]) -> list[str]:
+        errors = []
+        if "start" in data:
+            try:
+                for passage in passages_list:
+                    if passage.strip().startwith(data.get("start")):
+                        break
+            except Exception:
+                errors.append()
+            
+                
     @classmethod 
-    def validate(cls, data: dict) -> ValidationResult: 
+    def validate(cls, data: dict, passages_list: list[str]) -> ValidationResult: 
         errors = [] 
         warnings = [] 
         errors += cls.validate_structure(data) 

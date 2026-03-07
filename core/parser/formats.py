@@ -7,8 +7,8 @@ class TweeFormat(Enum):
 
 # Supported format version:
 # add version to format after compatibility verification
-SUPPORTED_FORMAT_VERSION = {
-    "Sugarcube" : [
+SUPPORTED_FORMAT_VERSIONS = {
+    "SugarCube" : [
         "2.37.3"
     ]
 }

@@ -1,8 +1,11 @@
+'''
 from dataclasses import dataclass
 from itertools import count
 
 @dataclass
 class Parser:
+    
+    
     def __init__(self, format_def: FormatDefinition):
         self.format_def = format_def
         self._counter = count(1)  # parte da 1
@@ -17,3 +20,4 @@ class Parser:
         format = Story.format
         # a seconda dal formato scelgo il modulo del parser
         pass
+'''
