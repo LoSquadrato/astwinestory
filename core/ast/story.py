@@ -1,14 +1,11 @@
 from dataclasses import dataclass, field
-from .passage import Passage
-from core.parser.formats import TweeFormat
 
+from core.formats.format_definition import FormatDefinition
+from .node import Passage
 
 
 @dataclass
 class Story:
-    title: str
-    ifid: str
-    format: TweeFormat
-    format_version: str
-    start_passage: str
-    passages: dict[str, Passage] = field(default_factory=dict)
+    title:          str
+    format:         str
+    passages:       list[Passage] = field(default_factory=list)

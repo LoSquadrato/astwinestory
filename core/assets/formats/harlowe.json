@@ -1,0 +1,61 @@
+{
+  "name": "Harlowe",
+  "version": "3",
+
+  "variables": {
+    "global_prefix": "$",
+    "local_prefix": "_"
+  },
+
+  "macros": {
+    "open": "(",
+    "close": ")",
+    "close_tag": "",
+    "inner": {
+      "control":    ["if:", "unless:", "elseif:", "else:", "for:"],
+      "output":     ["print:", "display:", "show:"],
+      "assignment": ["set:", "put:", "move:", "unpack:"],
+      "media":      ["icon-rotate:", "icon-counter:"],
+      "meta":       ["story:", "startup:", "header:", "footer:", "debug-startup:"],
+      "containers": ["a:", "dm:", "ds:"]
+    }
+  },
+
+  "links": {
+    "open": "[[",
+    "close": "]]",
+    "separator": "|"
+  },
+
+  "operators": {
+    "assignment": ["to", "into"],
+    "arithmetic": ["+", "-", "*", "/"],
+    "comparison": ["is", "is not", "contains", "does not contain", "matches", ">", ">=", "<", "<="],
+    "logical":    ["and", "or", "not"]
+  },
+
+  "literals": {
+    "string_delimiters": ["\"", "'"],
+    "boolean": ["true", "false"],
+    "null": ["null"]
+  },
+
+  "formatting": {
+    "bold":          ["**", "**"],
+    "italic":        ["//", "//"],
+    "strikethrough": ["~~", "~~"],
+    "superscript":   ["^^", "^^"]
+  },
+
+  "media": {
+    "image_open": "[img[",
+    "image_close": "]]",
+    "metadata_open": "{",
+    "metadata_close": "}"
+  },
+
+  "special_passages": [
+    "StoryData", "StoryTitle", "StoryBanner", "StoryInit",
+    "Start", "PassageHeader", "PassageFooter"
+  ]
+}

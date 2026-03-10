@@ -6,13 +6,14 @@ import warnings
 from typing import Dict
 from core.ast.story import Story
 from .formats import TweeFormat
-from .errors import ParsingError
-from core.validator.storydata_validators import StoryValidator
+from .content_parser import ParsingError
+from core.parser.formats.sugarcube.storydata_validators import StoryValidator
 
 # extract and validate storydata and storytitle
 def extract_story(text: str) -> Story:
     try:
         passages_list = split_passage(text)
+        
         storydata = extract_storydata(passages_list)
     except Exception as e:
         raise ParsingError([str(e)])
@@ -37,18 +38,6 @@ def extract_story(text: str) -> Story:
 
     return story
 
-# split file twee in a list of every passage
-def split_passage(text: str) -> list[str]:
-    if "::" in text and "\n" not in text:
-        raise ParsingError([
-            "The file contains '::' but no newline characters. "
-            "The Twee file may have been flattened into a single line."
-        ])
-    passage_cut = re.compile(r"(?=^::)", re.MULTILINE)
-    passages_list = passage_cut.split(text)
-    return passages_list[1:]
-
-
 def extract_storydata(passages_list: list[str]) -> Dict[str, str]:
     storydata_dict = None
     for passage in passages_list:
@@ -72,3 +61,5 @@ def extract_storytitle(passages_list: list[str]) -> str:
             storytitle = passage.split("StoryTitle", 1)[1]
             break
     return storytitle
+
+# to do: create func for other special passages: StorySubtitle, StoryAuthor, StoryMenu, StorySettings, StoryIncludes, stylesheet and script, UserStylesheet, UserScript

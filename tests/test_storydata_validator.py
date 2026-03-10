@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from core.validator.storydata_validators import StoryValidator, ValidationResult
+from core.parser.formats.sugarcube.storydata_validators import StoryValidator, ValidationResult
 from core.parser.formats import SUPPORTED_FORMAT_VERSIONS
 
 

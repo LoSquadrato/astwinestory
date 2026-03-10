@@ -165,41 +165,6 @@ class StoryValidator:
 
         return ValidationResult(errors, warnings)
 ```
-
----
-
-# 🏗 3. Factory Layer
-
-```python
-class ParsingError(Exception):
-    def __init__(self, errors: list[str]):
-        message = "ParsingError:\n" + "\n".join(f"- {e}" for e in errors)
-        super().__init__(message)
-        self.errors = errors
-
-
-class StoryFactory:
-
-    @staticmethod
-    def from_storydata(title: str, data: dict) -> Story:
-        result = StoryValidator.validate(data)
-
-        if not result.is_valid:
-            raise ParsingError(result.errors)
-
-        if result.warnings:
-            for w in result.warnings:
-                print(f"[WARNING] {w}")
-
-        return Story(
-            title=title,
-            ifid=data["ifid"],
-            format=StoryFormat(data["format"]),
-            format_version=data["format-version"],
-            start_passage=data["start"],
-        )
-```
-
 ---
 
 # 🎨 4. Renderer

@@ -1,0 +1,64 @@
+{
+  "name": "SugarCube",
+  "version": "2",
+
+  "variables": {
+    "global_prefix": "$",
+    "local_prefix": "_"
+  },
+
+  "macros": {
+    "open": "<<",
+    "close": ">>",
+    "close_tag": "/",
+    "inner": {
+      "control":    ["if", "elseif", "else", "for", "switch", "case", "default"],
+      "output":     ["print", "=", "include"],
+      "assignment": ["set", "unset", "run"],
+      "media":      ["audio", "video", "image"],
+      "meta":       ["script", "style", "widget", "passage"]
+    }
+  },
+
+  "links": {
+    "open": "[[",
+    "close": "]]"
+  },
+
+  "operators": {
+    "assignment": ["to", "="],
+    "arithmetic": ["+", "-", "*", "/", "%"],
+    "comparison": ["eq", "neq", "gt", "gte", "lt", "lte", "===", "!==", ">", ">=", "<", "<="],
+    "logical":    ["and", "or", "not", "&&", "||", "!"],
+    "string":     ["+"]
+  },
+
+  "literals": {
+    "string_delimiters": ["\"", "'", "`"],
+    "boolean": ["true", "false"],
+    "null": ["null", "undefined"],
+    "separator_setter": "|",
+    "separator_target": "->"
+  },
+
+  "formatting": {
+    "bold":          ["''", "''"],
+    "italic":        ["//", "//"],
+    "mono":          ["@@", "@@"],
+    "sub":           ["~", "~"],
+    "sup":           ["^^", "^^"]
+  },
+
+  "media": {
+    "image_open": "[img[",
+    "image_close": "]]",
+    "metadata_open": "{",
+    "metadata_close": "}"
+  },
+
+  "special_passages": [
+    "StoryData", "StoryTitle", "StoryBanner", "StoryInit",
+    "StoryMenu", "StoryShare", "PassageHeader", "PassageFooter",
+    "PassageDone", "PassageReady", "StoryCaption", "StoryInterface"
+  ]
+}

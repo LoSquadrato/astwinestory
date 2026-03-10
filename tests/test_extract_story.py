@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from core.parser.extract_story import (
+from core.parser.formats.sugarcube.extract_story import (
     split_passage,
     extract_storydata,
     extract_storytitle,
