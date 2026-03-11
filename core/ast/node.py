@@ -1,6 +1,4 @@
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import List
 
 
 @dataclass
@@ -24,8 +22,8 @@ class MacroNode(Node):
 
 @dataclass
 class LinkNode(Node):
-    target: str
     display: str = ""
+    children: list[Node] = field(default_factory=list)
     
 @dataclass
 class OperatorNode(Node):

@@ -27,13 +27,6 @@ class ParsingError(Exception):
 class Parser:
     
     def __init__(self, format_def: FormatDefinition):
-        # defensive: ensure essential sections exist
-        if not format_def:
-            raise ParsingError(["Missing format definition"])
-        if not hasattr(format_def, 'macros'):
-            raise ParsingError(["Format definition missing macros configuration"])
-        if not hasattr(format_def, 'links'):
-            raise ParsingError(["Format definition missing links configuration"])
         self.format_def = format_def
         self._counter = count(1)
         self._patterns = RegexBuilder(format_def)
@@ -44,12 +37,12 @@ class Parser:
     def _build_node(self, kind: str, match) -> Node:
         match kind:
             case "link":
-                link_inner = match.group("link_inner")
-                display, target = self._parse_link_parts(link_inner)
+                display = match.group("link_display")
+                target  = match.group("link_target") or match.group("link_inner")
                 return LinkNode(
                     node_id=self._next_id(),
                     display=display,
-                    target=target
+                    children=self.parse_content(target, self._patterns.build_macro_inner_pattern())
                 )
             case "variable":
                 var_name = match.group("variable")
@@ -61,10 +54,11 @@ class Parser:
                 )
             case "macro":
                 macro_type = match.group("macro_type")
+                children = match.group("macro_inner")
                 return MacroNode(
                     node_id=self._next_id(),
                     macro_type=macro_type,
-                    children=[]
+                    children=self.parse_content(children, self._patterns.build_macro_inner_pattern())
                 )
             case "operator":
                 return OperatorNode(
@@ -80,56 +74,51 @@ class Parser:
             case _:
                 raise ParsingError([f"Unknown node type: {kind}"])
 
-    def _build_content_pattern(self) -> re.Pattern | None:
-        parts = []
-        for key in ("macro", "link", "variable", "operator"):
-            pattern = self._patterns.get(key)
-            if pattern is not None:
-                parts.append(f"(?P<{key}>{pattern.pattern})")
-        if not parts:
-            return None
-        return re.compile("|".join(parts), re.DOTALL)
-
-    def _parse_link_parts(self, link_inner: str) -> tuple[str, str]:
-        if "->" in link_inner:
-            display, target = link_inner.split("->", 1)
-            return display.strip(), target.strip()
-        if "<-" in link_inner:
-            target, display = link_inner.split("<-", 1)
-            return display.strip(), target.strip()
-        if "|" in link_inner:
-            display, target = link_inner.split("|", 1)
-            return display.strip(), target.strip()
-        token = link_inner.strip()
-        return token, token
-        
     
     def parse_story(self, passage_list: list[str]) -> Story:
+        title = self.get_passage_name(passage_list[0]) or "Untitled Story"
+        passages= []
+        for passage in passage_list:
+            try:
+                passages.append(self.parse_passage(passage))
+            except ParsingError as e:
+                raise ParsingError([f"Error parsing passage '{title}':"] + e.errors)
         return Story(
-            title=self.get_passage_name(passage_list[0]) or "Untitled Story",
+            title=title,
             format=self.format_def.name,
-            passages=[self.parse_passage(passage) for passage in passage_list]
+            format_version=self.format_def.version,
+            passages=passages
         )
 
-    def parse_passage(self, raw: str) -> Passage:            
-        body = self._extract_passage_body(raw)
+
+    def parse_passage(self, raw: str) -> Passage:
+        name = self.get_passage_name(raw)
+        if not name:
+            raise ParsingError([f"Passage missing title: {raw[:30]}..."])
+        if self.format_def.is_special_passage(name):
+            return Passage(
+                node_id=self._next_id(),
+                name=name,
+                children=[TextNode(node_id=self._next_id(), value=raw)]
+            )
+        children = self.parse_content(
+            raw, 
+            self._patterns.build_passage_content_pattern()
+        )
+        if not children:
+            raise ParsingError([f"Passage '{name}' has no content."])     
         return Passage(
             node_id=self._next_id(),
-            name=self.get_passage_name(raw),
-            children=self.parse_content(body)
+            name=name,
+            children=children
         )
 
-    def _extract_passage_body(self, raw: str) -> str:
-        stripped = raw.lstrip()
-        _, _, remainder = stripped.partition("\n")
-        return remainder
 
-    def parse_content(self, text: str) -> list[Node]:
-        if not self.format_def.macros and not self.format_def.links:
-            raise ParsingError(["No macro/link patterns available for this format definition"])
+    def parse_content(self, text: str, pattern: re.Pattern) -> list[Node]:
+        # find matches for macros, links, variables, media pass them to _build_node, 
+        # and recursively parse_macro_nodes for macros
         nodes = []
         pivot = 0
-        pattern = self._build_content_pattern()
         if pattern is None:
             raise ParsingError(["No patterns available for this format definition"])
         for match in pattern.finditer(text):
@@ -140,12 +129,6 @@ class Parser:
             if kind is None:
                 raise ParsingError([f"Regex match missing group: {match}"])
             node = self._build_node(kind, match)
-            if kind == "macro":
-                inner = match.group("macro_inner")
-                node.children = self.parse_content(inner)
-            if kind == "link":
-                inner = node.display
-                node.children = self.parse_content(inner) if inner else []
             nodes.append(node)
             pivot = match.end()
 

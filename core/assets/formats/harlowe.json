@@ -23,7 +23,8 @@
 
   "links": {
     "open": "[[",
-    "close": "]]"
+    "close": "]]",
+    "separators": ["|"]
   },
 
   "operators": {
@@ -36,8 +37,7 @@
   "literals": {
     "string_delimiters": ["\"", "'"],
     "boolean": ["true", "false"],
-    "null": ["null"],
-    "separator_setter": ["|"]
+    "null": ["null"]
   },
 
   "formatting": {
@@ -47,7 +47,7 @@
     "superscript":   ["^^", "^^"]
   },
 
-  "media": {
+  "meta": {
     "image_open": "[img[",
     "image_close": "]]",
     "metadata_open": "{",

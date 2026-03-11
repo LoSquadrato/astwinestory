@@ -22,7 +22,8 @@
 
   "links": {
     "open": "[[",
-    "close": "]]"
+    "close": "]]",
+    "separators": ["|"]
   },
 
   "operators": {
@@ -36,8 +37,7 @@
   "literals": {
     "string_delimiters": ["\"", "'", "`"],
     "boolean": ["true", "false"],
-    "null": ["null", "undefined"],
-    "separator": ["|", "->"]
+    "null": ["null", "undefined"]
   },
 
   "formatting": {
@@ -48,15 +48,16 @@
     "sup":           ["^^", "^^"]
   },
 
-  "media": {
-    "image_open": "[img[",
-    "image_close": "]]",
+  "meta": {
+    "markup_open": "[",
+    "image_markup_open": "[img[",
+    "markup_close": "]",
     "metadata_open": "{",
     "metadata_close": "}"
   },
 
   "special_passages": [
-    "StoryData", "StoryTitle", "StoryBanner", "StoryInit",
+    "StoryData", "StoryTitle", "StoryBanner", "StoryInit", "Start",
     "StoryMenu", "StoryShare", "PassageHeader", "PassageFooter",
     "PassageDone", "PassageReady", "StoryCaption", "StoryInterface"
   ]

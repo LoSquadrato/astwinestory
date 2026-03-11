@@ -16,7 +16,7 @@ class MacroDefinition(BaseModel):
 class LinkDefinition(BaseModel):
     open:             str       # '[['
     close:            str       # ']]'
-
+    separators:       list[str] = []    # '->', '<-', '|'
 
 class FormatDefinition(BaseModel):
     name:             str
@@ -27,7 +27,7 @@ class FormatDefinition(BaseModel):
     operators:        dict[str, list[str]] = {}
     literals:         dict[str, list[str]] = {}
     formatting:       dict[str, list[str]] = {}
-    media:            dict[str, str]       = {}
+    meta:             dict[str, str]       = {}
     special_passages: list[str]            = []
 
 

@@ -19,7 +19,7 @@ class RegexBuilder:
             "operator":        self._build_operator_pattern,
             "literal":         self._build_literal_pattern,
             "formatting":      self._build_formatting_pattern,
-            "media":           self._build_media_pattern,
+            "meta":            self._build_meta_pattern,
             "special_passage": self._build_special_passage_pattern,
         }
         for key, builder in builders.items():
@@ -81,7 +81,25 @@ class RegexBuilder:
         cl = self._fmt.links.close
         if not op or not cl:
             return None
-        return re.compile(rf'{re.escape(op)}(?P<link_inner>[^{re.escape(cl[0])}]+?){re.escape(cl)}')
+        
+        separators = getattr(self._fmt.links, "separators", [])
+        escaped_op = re.escape(op)
+        escaped_cl = re.escape(cl)
+        
+        if separators:
+            sep_pattern = '|'.join(re.escape(s) for s in separators)
+            return re.compile(
+                rf'{escaped_op}'
+                rf'(?:(?P<link_display>.+?)(?:{sep_pattern})(?P<link_target>.+?)'
+                rf'|(?P<link_inner>[^{re.escape(cl[0])}]+?))'
+                rf'{escaped_cl}',
+                re.DOTALL
+            )
+        else:
+            return re.compile(
+                rf'{escaped_op}(?P<link_inner>[^{re.escape(cl[0])}]+?){escaped_cl}',
+                re.DOTALL
+            )
 
     def _build_operator_pattern(self) -> re.Pattern | None:
         if not self._fmt.operators:
@@ -116,16 +134,16 @@ class RegexBuilder:
             return None
         return re.compile(r'|'.join(re.escape(f) for f in fmts))
 
-    def _build_media_pattern(self) -> re.Pattern | None:
-        if not self._fmt.media:
+    def _build_meta_pattern(self) -> re.Pattern | None:
+        if not self._fmt.meta:
             return None
-        meds = sorted(
-            (m for meds in self._fmt.media.values() for m in meds),
+        metas = sorted(
+            (m for metas in self._fmt.meta.values() for m in metas),
             key=len, reverse=True
         )
-        if not meds:
+        if not metas:
             return None
-        return re.compile(r'|'.join(re.escape(m) for m in meds))
+        return re.compile(r'|'.join(re.escape(m) for m in metas))
 
     def _build_special_passage_pattern(self) -> re.Pattern | None:
         if not self._fmt.special_passages:
@@ -148,3 +166,42 @@ class RegexBuilder:
     
     def build_title_pattern(self) -> re.Pattern:
         return re.compile(r'^\s*::\s*(?P<passage_name>[^\[\{]+?)(?:\s*\[|\s*\{|$)', re.MULTILINE)
+    
+    # deprecated, replaced by build_passage_content_pattern 
+    # which only includes patterns valid in passage content
+    def build_content_pattern(self) -> re.Pattern | None:
+        parts = []
+        for key in ("macro", "link", "variable", "operator"):
+            pattern = self._patterns.get(key)
+            if pattern is not None:
+                parts.append(f"(?P<{key}>{pattern.pattern})")
+        if not parts:
+            return None
+        return re.compile("|".join(parts), re.DOTALL)
+    
+    def build_macro_inner_pattern(self) -> re.Pattern | None:
+        # This pattern is used to parse the inner content of macros, 
+        # which may contain nested macros. It should match the same constructs as the content pattern,
+        # excluding link and special_passage patterns, which are not valid inside macros.
+        # the key pattern order has to be: 
+        # variable, macro, media, operator, literal, formatting
+        parts = []
+        for key in ("variable", "macro", "media", "operator", "literal", "formatting"):
+            pattern = self._patterns.get(key)
+            if pattern is not None:
+                parts.append(f"(?P<{key}>{pattern.pattern})")
+        if not parts:
+            return None
+        return re.compile("|".join(parts), re.DOTALL)
+    
+    def build_passage_content_pattern(self) -> re.Pattern | None:
+        # same as content pattern, but only macros/links/variables/media 
+        # that are valid in passage content (e.g. no operators)
+        parts = []
+        for key in ("macro", "link", "variable", "media"):
+            pattern = self._patterns.get(key)
+            if pattern is not None:
+                parts.append(f"(?P<{key}>{pattern.pattern})")
+        if not parts:
+            return None
+        return re.compile("|".join(parts), re.DOTALL)
