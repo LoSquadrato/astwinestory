@@ -4,8 +4,8 @@ from core.formats.format_definition import FormatDefinition
 from pydantic import ValidationError as PydanticValidationError
 
 
-FORMATS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "formats")
-
+# FORMATS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets",
+FORMATS_DIR = "/home/losqu/workspace/github.com/LoSquadrato/StoryLoom/core/assets/formats"
 
 class FormatLoaderError(Exception):
     def __init__(self, message: str):
@@ -48,4 +48,7 @@ def _read_json(path: str) -> dict:
 
 
 def _build_definition(raw: dict) -> FormatDefinition:
-    return FormatDefinition.model_validate(raw)
+    try:
+        return FormatDefinition.model_validate(raw)
+    except PydanticValidationError as e:
+        raise FormatLoaderError(f"Invalid format definition: {e}") from e

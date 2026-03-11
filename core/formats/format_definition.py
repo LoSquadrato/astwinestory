@@ -9,23 +9,21 @@ class VariableDefinition(BaseModel):
 class MacroDefinition(BaseModel):
     open:       str                 # '<<' | '('
     close:      str                 # '>>' | ')'
-    close_tag:  str 
+    close_tag:  str = ""
     inner:      dict[str, list[str]] = {}
     
     
 class LinkDefinition(BaseModel):
-    open:             str       
-    close:            str
-    separator_target: str
-    separator_setter: str
+    open:             str       # '[['
+    close:            str       # ']]'
 
 
 class FormatDefinition(BaseModel):
     name:             str
     version:          str
-    variables:        VariableDefinition = None
+    variables:        VariableDefinition 
     macros:           MacroDefinition = None
-    links:            LinkDefinition = None
+    links:            LinkDefinition
     operators:        dict[str, list[str]] = {}
     literals:         dict[str, list[str]] = {}
     formatting:       dict[str, list[str]] = {}
@@ -33,6 +31,7 @@ class FormatDefinition(BaseModel):
     special_passages: list[str]            = []
 
 
+# Delete this? Check after renderer implementation
     def is_variable(self, token: str) -> bool:
         if not self.variables:
             return False
@@ -40,10 +39,14 @@ class FormatDefinition(BaseModel):
                 token.startswith(self.variables.local_prefix))
 
     def is_translatable_macro(self, macro_type: str) -> bool:
-        if not self.macros:
+        if not self.macros or not self.macros.inner:
             return False
-        """Restituisce True se la macro genera TextNode (output), False altrimenti."""
-        return macro_type in self.macros.inner.values()
+        """Return True if the macro produces text output, False otherwise."""
+        # macros.inner maps categories to lists; we must search inside lists
+        for lst in self.macros.inner.values():
+            if macro_type in lst:
+                return True
+        return False
     
     
     def is_special_passage(self, token: str) -> bool:

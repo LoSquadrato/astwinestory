@@ -7,16 +7,6 @@ from typing import List
 class Node:
     node_id: int
 
-# eliminare perchè ormai non serve più
-@dataclass
-class NodeType(Enum):
-    PASSAGE = "passage"
-    MACRO = "macro"
-    LINK = "link"
-    VARIABLE = "variable"
-    TEXT = "text"
-    OPERATOR = "operator"
-    META = "meta"
 
 @dataclass
 class TextNode(Node):
@@ -34,8 +24,8 @@ class MacroNode(Node):
 
 @dataclass
 class LinkNode(Node):
-    display: str = ""
     target: str
+    display: str = ""
     
 @dataclass
 class OperatorNode(Node):
@@ -43,7 +33,7 @@ class OperatorNode(Node):
 
 @dataclass
 class MetaNode(Node):
-    kind = str
+    kind: str
     raw: str
     
 @dataclass

@@ -23,8 +23,7 @@
 
   "links": {
     "open": "[[",
-    "close": "]]",
-    "separator": "|"
+    "close": "]]"
   },
 
   "operators": {
@@ -37,7 +36,8 @@
   "literals": {
     "string_delimiters": ["\"", "'"],
     "boolean": ["true", "false"],
-    "null": ["null"]
+    "null": ["null"],
+    "separator_setter": ["|"]
   },
 
   "formatting": {

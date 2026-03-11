@@ -1,7 +1,6 @@
 from core.ast.story import Story
 from core.ast.node import (
-       Node, 
-       NodeType,
+       Node,
        LinkNode,
        MacroNode,
        MetaNode,
@@ -11,8 +10,7 @@ from core.ast.node import (
        VariableNode
        )
 
-__all__ = ["Node", 
-           "NodeType",
+__all__ = ["Node",
            "LinkNode",
            "MacroNode",
            "MetaNode",

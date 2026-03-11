@@ -7,19 +7,22 @@ from core.formats.format_loader import load_format, FORMATS_DIR
 
 console = Console()
 
+MAX_STORY_SIZE = 10 * 1024 * 1024  # 10 MB limit for input story
+
+
 def _suggest_output_path(source: Path, format: str) -> Path:
     return source.with_stem(f"{source.stem}_{format}")
 
 def _confirm_output_path(suggested: Path) -> Path:
     print(f"\n{'─' * 50}")
-    print(f"  Output suggerito:")
+    print(f"  Suggested output path:")
     print(f"  {suggested}")
     print(f"{'─' * 50}")
-    print("  [Invio]  Conferma path suggerito")
-    print("  [path]   Digita un path alternativo")
+    print("  [Enter] confirm suggested path")
+    print("  [path]  type an alternative path")
     print(f"{'─' * 50}")
 
-    raw = input("  Path output: ").strip()
+    raw = input("  Output path: ").strip()
 
     if raw == "":
         return suggested
@@ -32,84 +35,57 @@ def _confirm_output_path(suggested: Path) -> Path:
     return custom
 
 def _file_loader(path: Path) -> str:
+    # validate file exists and size before reading
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"Story not found or not a file: {path}")
+
+    size = path.stat().st_size
+    if size == 0:
+        raise ValueError("Input story is empty")
+    if size > MAX_STORY_SIZE:
+        raise ValueError(f"Input story exceeds maximum allowed size ({MAX_STORY_SIZE} bytes)")
+
     with path.open("r", encoding="utf-8") as f:
         raw = f.read()
     if not raw:
-        raise Exception("can't parsing an empty story")
-    return raw  
+        raise ValueError("Unable to read story content")
+    return raw
 
 
 def run_repl(path: Path) -> None:
-    
-    console.print("This is StoryLoom CLI!!!", style="bold cyan")
-    console.print(f"{path} is your story?", style="bold red")
-    console.print("Please do not edit a story if it is not yours", style="bold red")
-    console.print("or if you do not have the full right to it", style="bold red")
-    
+    console.print("Welcome to StoryLoom CLI!", style="bold cyan")
+    console.print(f"Using story: {path}", style="bold red")
+    console.print("Please do not edit stories you do not own or have rights to.", style="bold red")
 
     while True:
-        # ── Step 1: selezione formato output ──────────────────────────────────
+        # ── Step 1: choose output format ───────────────────────────────────────
         fmt_option = select_from_menu(
-            "Seleziona formato di output", 
-            get_format_list(FORMATS_DIR, format_list=[])
-            )
+            "Select output format",
+            get_format_list(FORMATS_DIR, format_list=[]),
+        )
 
-        # ── Step 2: selezione funzione ─────────────────────────────────────────
-        fn_option = select_from_menu("Seleziona funzione", FUNCTIONS)
+        # ── Step 2: choose operation ───────────────────────────────────────────
+        fn_option = select_from_menu("Select function", FUNCTIONS)
 
-        # ── Step 3: conferma / modifica path output ────────────────────────────
-        suggested = _suggest_output_path(path, fmt_option)
+        # ── Step 3: confirm / modify output path ───────────────────────────────
+        suggested = _suggest_output_path(path, fmt_option.key)
         output_path = _confirm_output_path(suggested)
 
-        # ── Step 4: esecuzione ─────────────────────────────────────────────────
-        print(f"\n  Elaborazione in corso...")
-        
+        # ── Step 4: execute ───────────────────────────────────────────────────
+        print(f"\n  Processing...")
+
         try:
             text = _file_loader(path)
-            format_definition = load_format(fmt_option)
+            format_definition = load_format(fmt_option.key)
             parser = Parser(format_definition)
             parsed_story = parser.parse_story(Parser.split_passage(text))
             console.print("[green]Validation passed.[/]")
             console.print(f"[blue]Title: {parsed_story.title}[/]")
             console.print(f"[blue]Format: {parsed_story.format}[/]")
             console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
-            # ho il test e il formato di partenza: 
-            # 1. carico la FormatDefinition
-            # 2. creo il parser (con format definition)
-            # 3. 
-            # 
-                    
+            # framework for future conversion/translation
         except Exception as e:
             console.print(f"[red]{e}[/]")
             break
-                # for testing, delete message in future
-        
-        # scelta se tradurre in lingua o cambiare formato
-        # per la traduzione posso pensare di stampare una versione del file con le key + ast con i riferimenti
-        # poi si può caricare il file tradotto con le key e renderizzare il twee?
 
-      
-    
-'''           
-            convert(
-                source_path=path,
-                output_path=output_path,
-                fmt=fmt_option.key,
-                function=fn_option.key,
-            )
-            print(f"\n  ✓ Completato → {output_path}")
-        except ConversionError as e:
-            print(f"\n  ✗ Errore durante la conversione:\n  {e}")
-        except Exception as e:
-            print(f"\n  ✗ Errore inatteso:\n  {e}")
-
-        # ── Step 5: continuare o uscire ────────────────────────────────────────
-        print(f"\n{'─' * 50}")
-        print("  [Invio]  Nuova operazione sullo stesso file")
-        print("  [q]      Esci")
-        print(f"{'─' * 50}")
-        again = input("  > ").strip().lower()
-        if again == "q":
-            print("\n  Arrivederci.\n")
-            break
-'''
+    # todo: prompt for translation or format change before loop continues

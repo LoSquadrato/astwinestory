@@ -37,8 +37,7 @@
     "string_delimiters": ["\"", "'", "`"],
     "boolean": ["true", "false"],
     "null": ["null", "undefined"],
-    "separator_setter": "|",
-    "separator_target": "->"
+    "separator": ["|", "->"]
   },
 
   "formatting": {

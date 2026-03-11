@@ -34,18 +34,17 @@ class StoryValidator:
             except Exception: 
                 errors.append("Invalid IFID (must be valid UUID)") 
         if "format" in data:
-            try: 
-                TweeFormat(data["format"]) 
-            except Exception: 
-                errors.append(f"Unsupported format '{data.get('format')}'")
-        fmt = data.get("format") 
+            fmt = data.get("format")
+            if fmt not in SUPPORTED_FORMAT_VERSIONS:
+                errors.append(f"Unsupported format '{fmt}'")
+        fmt = data.get("format")
         version = data.get("format-version")
-                        
-        if fmt in SUPPORTED_FORMAT_VERSIONS: 
-            if version not in SUPPORTED_FORMAT_VERSIONS[fmt]: 
-                warnings.append( 
-                    f"{fmt}: {version} not officially supported, there may be issues" 
-                ) 
+
+        if fmt in SUPPORTED_FORMAT_VERSIONS:
+            if version not in SUPPORTED_FORMAT_VERSIONS[fmt]:
+                warnings.append(
+                    f"{fmt}: {version} not officially supported, there may be issues"
+                )
         return errors, warnings 
         
     @staticmethod    
