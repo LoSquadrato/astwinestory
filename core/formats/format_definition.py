@@ -27,7 +27,7 @@ class FormatDefinition(BaseModel):
     operators:        dict[str, list[str]] = {}
     literals:         dict[str, list[str]] = {}
     formatting:       dict[str, list[str]] = {}
-    meta:             dict[str, str]       = {}
+    meta:             dict[str, list[str]] = {}
     special_passages: list[str]            = []
 
 

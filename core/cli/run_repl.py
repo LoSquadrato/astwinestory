@@ -1,6 +1,6 @@
 from rich.console import Console
 from pathlib import Path
-from .menus import select_from_menu, get_format_list, FUNCTIONS
+from .menus import FUNCTIONS_LIST, select_from_menu, get_format_list
 from .converter import convert, ConversionError
 from core.parser.content_parser import Parser
 from core.formats.format_loader import load_format, FORMATS_DIR
@@ -34,7 +34,7 @@ def _confirm_output_path(suggested: Path) -> Path:
 
     return custom
 
-def _file_loader(path: Path) -> str:
+def file_loader(path: Path) -> str:
     # validate file exists and size before reading
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"Story not found or not a file: {path}")
@@ -52,10 +52,12 @@ def _file_loader(path: Path) -> str:
     return raw
 
 
-def run_repl(path: Path) -> None:
+def run_repl(path: Path) -> dict:
     console.print("Welcome to StoryLoom CLI!", style="bold cyan")
     console.print(f"Using story: {path}", style="bold red")
     console.print("Please do not edit stories you do not own or have rights to.", style="bold red")
+    
+    command = {}
 
     while True:
         # ── Step 1: choose output format ───────────────────────────────────────
@@ -63,29 +65,18 @@ def run_repl(path: Path) -> None:
             "Select output format",
             get_format_list(FORMATS_DIR, format_list=[]),
         )
+        command["format"] = fmt_option
 
         # ── Step 2: choose operation ───────────────────────────────────────────
-        fn_option = select_from_menu("Select function", FUNCTIONS)
+        fn_option = select_from_menu("Select function", FUNCTIONS_LIST)
+        command["function"] = fn_option
+        
 
         # ── Step 3: confirm / modify output path ───────────────────────────────
         suggested = _suggest_output_path(path, fmt_option.key)
         output_path = _confirm_output_path(suggested)
+        command["output_path"] = output_path
 
-        # ── Step 4: execute ───────────────────────────────────────────────────
-        print(f"\n  Processing...")
+        return command
 
-        try:
-            text = _file_loader(path)
-            format_definition = load_format(fmt_option.key)
-            parser = Parser(format_definition)
-            parsed_story = parser.parse_story(Parser.split_passage(text))
-            console.print("[green]Validation passed.[/]")
-            console.print(f"[blue]Title: {parsed_story.title}[/]")
-            console.print(f"[blue]Format: {parsed_story.format}[/]")
-            console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
-            # framework for future conversion/translation
-        except Exception as e:
-            console.print(f"[red]{e}[/]")
-            break
 
-    # todo: prompt for translation or format change before loop continues

@@ -7,8 +7,10 @@ from core.ast.node import (
        OperatorNode,
        Passage,
        TextNode,
-       VariableNode
-       )
+       VariableNode,
+       LiteralNode,
+       FormattingNode
+)
 
 __all__ = ["Node",
            "LinkNode",
@@ -18,5 +20,7 @@ __all__ = ["Node",
            "Passage",
            "Story",
            "TextNode",
-           "VariableNode"
+           "VariableNode",
+           "LiteralNode",
+           "FormattingNode"
     ]

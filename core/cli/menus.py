@@ -11,7 +11,7 @@ class MenuOption:
 
 
 # operations offered by the CLI; `key` is the internal identifier used later
-FUNCTIONS: List[MenuOption] = [
+FUNCTIONS_LIST: List[MenuOption] = [
     MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
     MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders"),
 ]

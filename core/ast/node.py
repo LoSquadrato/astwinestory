@@ -35,8 +35,19 @@ class MetaNode(Node):
     raw: str
     
 @dataclass
+class LiteralNode(Node):
+    value: str
+    
+@dataclass
+class FormattingNode(Node):
+    value: str
+    
+    
+@dataclass
 class Passage(Node):
     name:        str
+    tags:        str
+    metadata:    str
     children:    list[Node] = field(default_factory=list)
 
 

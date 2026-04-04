@@ -51,6 +51,10 @@ class RegexBuilder:
             return None
         return re.compile(rf'(?:{"|".join(prefixes)})\w+')
 
+# todo: update macro pattern to handle stack style parsing for nested macros:
+# MACRO_START = re.compile(rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)')
+   
+
     def _build_macro_pattern(self) -> re.Pattern | None:
         if not self._fmt.macros:
             return None
@@ -63,6 +67,20 @@ class RegexBuilder:
             re.DOTALL
         )
         
+# todo: update inner pattern content for extract macro inner content with stack parsing to handle nesting:
+# def extract_macro(text, start, op='(', cl=')'):
+#    stack = 0
+#    for match in re.finditer(rf'[{re.escape(op)}{re.escape(cl)}]', text[start:]):
+#        char = match.group()
+#        if char == op:
+#            stack += 1
+#        else:
+#            stack -= 1
+#            if stack == 0:
+#                end = start + match.end()
+#                return text[start:end]
+#   return None
+#        
     def _build_inner_pattern(self) -> re.Pattern | None:
         if not self._fmt.macros:
             return None

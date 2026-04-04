@@ -41,21 +41,23 @@
   },
 
   "formatting": {
-    "bold":          ["**", "**"],
+    "bold":          ["*", "*"],
     "italic":        ["//", "//"],
     "strikethrough": ["~~", "~~"],
     "superscript":   ["^^", "^^"]
   },
 
   "meta": {
-    "image_open": "[img[",
-    "image_close": "]]",
-    "metadata_open": "{",
-    "metadata_close": "}"
+    "image": ["[img[", "]]"],
+    "metadata": ["{", "}"],
+    "tag" : ["[", "]"],
+    "html" : ["<", ">"],
+    "script" : ["<script>", "</script>"]
   },
 
   "special_passages": [
     "StoryData", "StoryTitle", "StoryBanner", "StoryInit",
-    "Start", "PassageHeader", "PassageFooter"
+    "Start", "PassageHeader", "PassageFooter", "UserStylesheet", "UserScript",
+    "Modal code"
   ]
 }

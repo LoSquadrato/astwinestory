@@ -13,7 +13,9 @@ from core.ast import (
     MacroNode,
     LinkNode,
     OperatorNode,
-    MetaNode
+    MetaNode,
+    LiteralNode,
+    FormattingNode
 )
 
 class ParsingError(Exception):
@@ -71,6 +73,16 @@ class Parser:
                     kind="meta",
                     raw=match.group("meta_raw")
                 )
+            case "literal":
+                return LiteralNode(
+                    node_id=self._next_id(),
+                    value=match.group("literal")
+                )
+            case "formatting":
+                return FormattingNode(
+                    node_id=self._next_id(),
+                    value=match.group("formatting")
+                )
             case _:
                 raise ParsingError([f"Unknown node type: {kind}"])
 
@@ -90,7 +102,8 @@ class Parser:
             passages=passages
         )
 
-
+# todo: title line contains tags and metadata, 
+# need to parse those separately and store in Passage object
     def parse_passage(self, raw: str) -> Passage:
         name = self.get_passage_name(raw)
         if not name:
@@ -113,11 +126,11 @@ class Parser:
             children=children
         )
 
-
+# todo: macro nodes need to be parsed with a stack to handle nesting
     def parse_content(self, text: str, pattern: re.Pattern) -> list[Node]:
         # find matches for macros, links, variables, media pass them to _build_node, 
         # and recursively parse_macro_nodes for macros
-        nodes = []
+        nodes = [] 
         pivot = 0
         if pattern is None:
             raise ParsingError(["No patterns available for this format definition"])
