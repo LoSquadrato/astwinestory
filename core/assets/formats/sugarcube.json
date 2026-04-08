@@ -1,6 +1,7 @@
 {
   "name": "SugarCube",
   "version": "2",
+  "syntaxtype": "markup",
 
   "variables": {
     "global_prefix": "$",
@@ -49,11 +50,12 @@
   },
 
   "meta": {
-    "markup_open": "[",
-    "image_markup_open": "[img[",
-    "markup_close": "]",
-    "metadata_open": "{",
-    "metadata_close": "}"
+    "markup": ["[", "]"],
+    "image_markup": ["[img[", "]"],
+    "metadata": ["{", "}"],
+    "html": ["<", ">"],
+    "script": ["<script>", "</script>"],
+    "style": ["<style>", "</style>"]
   },
 
   "special_passages": [

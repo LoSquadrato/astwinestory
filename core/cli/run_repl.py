@@ -59,24 +59,23 @@ def run_repl(path: Path) -> dict:
     
     command = {}
 
-    while True:
-        # ── Step 1: choose output format ───────────────────────────────────────
-        fmt_option = select_from_menu(
-            "Select output format",
-            get_format_list(FORMATS_DIR, format_list=[]),
-        )
-        command["format"] = fmt_option
+    # ── Step 1: choose output format ───────────────────────────────────────
+    fmt_option = select_from_menu(
+        "Select output format",
+        get_format_list(FORMATS_DIR, format_list=[]),
+    )
+    command["format"] = fmt_option
 
-        # ── Step 2: choose operation ───────────────────────────────────────────
-        fn_option = select_from_menu("Select function", FUNCTIONS_LIST)
-        command["function"] = fn_option
+    # ── Step 2: choose operation ───────────────────────────────────────────
+    fn_option = select_from_menu("Select function", FUNCTIONS_LIST)
+    command["function"] = fn_option
         
 
-        # ── Step 3: confirm / modify output path ───────────────────────────────
-        suggested = _suggest_output_path(path, fmt_option.key)
-        output_path = _confirm_output_path(suggested)
-        command["output_path"] = output_path
+    # ── Step 3: confirm / modify output path ───────────────────────────────
+    suggested = _suggest_output_path(path, fmt_option.key)
+    output_path = _confirm_output_path(suggested)
+    command["output_path"] = output_path
 
-        return command
+    return command
 
 

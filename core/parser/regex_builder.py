@@ -13,8 +13,8 @@ class RegexBuilder:
     def _build(self) -> None:
         builders = {
             "variable":        self._build_variable_pattern,
-            "macro":           self._build_macro_pattern,
-            "inner":           self._build_inner_pattern,
+            "macro":           self._build_macro_start_pattern,
+            "inner":           self._build_inner_pattern, # deprecated
             "link":            self._build_link_pattern,
             "operator":        self._build_operator_pattern,
             "literal":         self._build_literal_pattern,
@@ -26,18 +26,38 @@ class RegexBuilder:
             pattern = builder()
             if pattern is not None:
                 self._patterns[key] = pattern
+        # build custom patterns from model_extra field, if any and add them to the patterns dict
+        # self._patterns.update(self._build_custom_patterns())
 
     # getter method
     def get(self, key: str) -> re.Pattern | None:
         return self._patterns.get(key)
 
+    # watcher method for available patterns, used in content parser to check if a pattern is available before trying to match it
     def available(self) -> list[str]:
         return list(self._patterns.keys())
-
     
+    def get_key_list(self, mode: str) -> list[str] | None:
+        if mode == "passage":
+            return ["macro", "link", "variable", "meta", "formatting"]
+        elif mode == "node":
+            return ["variable", "macro", "meta", "operator", "literal", "formatting"]
+        else:
+            return None
+            
 ######################################################################
     # Private builder func create pattern for every format field
 ######################################################################
+    # todo: update pattern builder to include key group in the pattern, 
+    # so we can identify which pattern matched in the content parser
+    def _build_custom_patterns(self) -> dict[str, re.Pattern]:
+        result = {}
+        for field_name, field_data in self._fmt.model_extra.items():
+            tokens = [(re.compile(rf'|(?P<{field_name}>{re.escape(p)})')) for patterns in field_data.values() for p in patterns]
+            if tokens:
+                result[field_name] = re.compile("|".join(tokens))
+        return result
+       
     
     def _build_variable_pattern(self) -> re.Pattern | None:
         if not self._fmt.variables:
@@ -54,43 +74,27 @@ class RegexBuilder:
 # todo: update macro pattern to handle stack style parsing for nested macros:
 # MACRO_START = re.compile(rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)')
    
-
-    def _build_macro_pattern(self) -> re.Pattern | None:
+    def _build_macro_start_pattern(self) -> re.Pattern | None:
         if not self._fmt.macros:
             return None
         op = self._fmt.macros.open
         cl = self._fmt.macros.close
         if not op or not cl:
             return None
-        return re.compile(
-            rf'{re.escape(op)}(?P<macro_type>\w[\w\-]*:?)(?P<macro_inner>.*?){re.escape(cl)}',
-            re.DOTALL
-        )
+        return re.compile(rf'({re.escape(op)})(?P<macro_type>\w[\w-]*:?)')
         
-# todo: update inner pattern content for extract macro inner content with stack parsing to handle nesting:
-# def extract_macro(text, start, op='(', cl=')'):
-#    stack = 0
-#    for match in re.finditer(rf'[{re.escape(op)}{re.escape(cl)}]', text[start:]):
-#        char = match.group()
-#        if char == op:
-#            stack += 1
-#        else:
-#            stack -= 1
-#            if stack == 0:
-#                end = start + match.end()
-#                return text[start:end]
-#   return None
-#        
+    # todo: update after resolve operator pattern builder errors
     def _build_inner_pattern(self) -> re.Pattern | None:
-        if not self._fmt.macros:
+        if not self._fmt.macros or not self._fmt.macros.inner:
             return None
-        inner = sorted(
-            (ins for inner in self._fmt.macros.inner.values() for ins in inner),
-            key=len, reverse=True   
+        lits = sorted(
+            (lit for lits in self._fmt.literals.values() for lit in lits),
+            key=len, reverse=True
         )
-        if not inner:
+        if not lits:
             return None
-        return re.compile(r'|'.join(re.escape(ins) for ins in inner))
+        return re.compile(r'|'.join(re.escape(lit) for lit in lits))
+    
         
     def _build_link_pattern(self) -> re.Pattern | None:
         if not self._fmt.links:
@@ -119,16 +123,17 @@ class RegexBuilder:
                 re.DOTALL
             )
 
+# todo: DRY up the pattern builders for operator/literal/formatting/meta/special_passage, they all follow the same structure
     def _build_operator_pattern(self) -> re.Pattern | None:
         if not self._fmt.operators:
             return None
-        ops = sorted(
-            (op for ops in self._fmt.operators.values() for op in ops if not op.isalpha()),
+        lits = sorted(
+            (lit for lits in self._fmt.operators.values() for lit in lits),
             key=len, reverse=True
         )
-        if not ops:
+        if not lits:
             return None
-        return re.compile(r'|'.join(re.escape(op) for op in ops))
+        return re.compile(r'|'.join(re.escape(lit) for lit in lits))
 
     def _build_literal_pattern(self) -> re.Pattern | None:
         if not self._fmt.literals:
@@ -152,16 +157,23 @@ class RegexBuilder:
             return None
         return re.compile(r'|'.join(re.escape(f) for f in fmts))
 
+    
     def _build_meta_pattern(self) -> re.Pattern | None:
         if not self._fmt.meta:
             return None
-        metas = sorted(
-            (m for metas in self._fmt.meta.values() for m in metas),
-            key=len, reverse=True
-        )
+        metas = []
+        for key, tokens in self._fmt.meta.items():
+            metas.append(
+                # key group maybe don't work, make a try
+                rf'(?P<{key}>'
+                rf'({re.escape(tokens[0])})'
+                rf'.+?'
+                rf'({re.escape(tokens[1])})'
+                rf')'
+            )
         if not metas:
             return None
-        return re.compile(r'|'.join(re.escape(m) for m in metas))
+        return re.compile(r'|'.join(metas), re.DOTALL)
 
     def _build_special_passage_pattern(self) -> re.Pattern | None:
         if not self._fmt.special_passages:
@@ -174,16 +186,23 @@ class RegexBuilder:
     # Public builder func group pattern for parsing func
 ######################################################################
            
-    def build_combined_pattern(self) -> re.Pattern | None:
+    def build_combined_pattern(self, keys: list[str]) -> re.Pattern | None:
         parts = []
-        for key, pattern in self._patterns.items():
-            parts.append(f'(?P<{key}>{pattern.pattern})')
+        for key in keys:
+            pattern = self._patterns.get(key)
+            if pattern is not None:
+                parts.append(f'(?P<{key}>{pattern.pattern})')
         if not parts:
             return None
         return re.compile(r'|'.join(parts), re.DOTALL)
     
     def build_title_pattern(self) -> re.Pattern:
-        return re.compile(r'^\s*::\s*(?P<passage_name>[^\[\{]+?)(?:\s*\[|\s*\{|$)', re.MULTILINE)
+        return re.compile(
+            r'^::\s*(?P<title>[^\[\]{}\n]+?)\s*'
+            r'(?:\[(?P<tags>[^\]]*)\])?\s*'
+            r'(?:\{(?P<metadata>[^\}]*)\})?\s*$',
+            re.MULTILINE
+        )
     
     # deprecated, replaced by build_passage_content_pattern 
     # which only includes patterns valid in passage content
@@ -197,29 +216,29 @@ class RegexBuilder:
             return None
         return re.compile("|".join(parts), re.DOTALL)
     
-    def build_macro_inner_pattern(self) -> re.Pattern | None:
-        # This pattern is used to parse the inner content of macros, 
-        # which may contain nested macros. It should match the same constructs as the content pattern,
-        # excluding link and special_passage patterns, which are not valid inside macros.
-        # the key pattern order has to be: 
-        # variable, macro, media, operator, literal, formatting
-        parts = []
-        for key in ("variable", "macro", "media", "operator", "literal", "formatting"):
-            pattern = self._patterns.get(key)
-            if pattern is not None:
-                parts.append(f"(?P<{key}>{pattern.pattern})")
-        if not parts:
+    def build_node_content_pattern(self) -> re.Pattern | None:
+        return self.build_combined_pattern(self.get_key_list("node"))
+    
+    def build_macro_iteration_pattern(self) -> re.Pattern | None:
+        # after findind a macro start this pattern work with a stack based function 
+        # to extract the whole macro content, including nested macros
+        op = self._fmt.macros.open
+        cl = self._fmt.macros.close
+        if not op or not cl:
             return None
-        return re.compile("|".join(parts), re.DOTALL)
+        return re.compile(rf'({re.escape(op)})|({re.escape(cl)})', re.DOTALL)
     
     def build_passage_content_pattern(self) -> re.Pattern | None:
-        # same as content pattern, but only macros/links/variables/media 
-        # that are valid in passage content (e.g. no operators)
-        parts = []
-        for key in ("macro", "link", "variable", "media"):
-            pattern = self._patterns.get(key)
-            if pattern is not None:
-                parts.append(f"(?P<{key}>{pattern.pattern})")
-        if not parts:
+        return self.build_combined_pattern(self.get_key_list("passage"))
+    
+    def build_macro_with_stack_pattern(self) -> re.Pattern | None:
+        # this pattern is used to parse the full content of a macro after it has been extracted with the stack function
+        # it should match the same constructs as the macro inner pattern, but also include links and special passages, which are valid inside macros
+        op = self._fmt.macros.open
+        cl = self._fmt.macros.close
+        if not op or not cl:
             return None
-        return re.compile("|".join(parts), re.DOTALL)
+        return re.compile(
+            rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)\s*(?P<macro_inner>.*){re.escape(cl)}',
+            re.DOTALL
+        )

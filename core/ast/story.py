@@ -8,6 +8,7 @@ from .node import Passage
 class Story:
     title:          str
     format:         FormatDefinition
-    passages:       list[Passage] = field(default_factory=list)
     format_version: str
+    passages:       list[Passage] = field(default_factory=list)
+    
     

@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 from core.cli.run_repl import run_repl, file_loader
-from core.parser.content_parser import Parser
-from core.formats.format_loader import load_format
+from core.parser import Parser, ParsingError, RegexBuilder
+from core.formats import load_format, FormatDefinitionError, FormatLoaderError
 from rich.console import Console
 
 console = Console()
@@ -38,11 +38,11 @@ def main() -> None:
     print(f"\n  Processing...")
 
     text = file_loader(source_path)
-    format_definition = load_format(command["format"].key)
-    parser = Parser(format_definition)
     
-    try:
+    format_definition = load_format(command["format"].key)
         
+    parser = Parser(format_definition)
+    try:
         parsed_story = parser.parse_story(Parser.split_passage(text))
     except Exception as e:
         console.print(f"[red]{e}[/]")
@@ -53,7 +53,6 @@ def main() -> None:
     console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
             # framework for future conversion/translation
         
-
 
 if __name__ == "__main__":
     main()

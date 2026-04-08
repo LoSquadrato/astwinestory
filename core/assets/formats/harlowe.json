@@ -1,6 +1,7 @@
 {
   "name": "Harlowe",
   "version": "3",
+  "syntaxtype": "linear",
 
   "variables": {
     "global_prefix": "$",
