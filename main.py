@@ -5,6 +5,8 @@ from core.parser import Parser, ParsingError, RegexBuilder
 from core.formats import load_format, FormatDefinitionError, FormatLoaderError
 from rich.console import Console
 
+from core.parser.content_render import Render
+
 console = Console()
 
 '''
@@ -51,8 +53,25 @@ def main() -> None:
     console.print(f"[blue]Title: {parsed_story.title}[/]")
     console.print(f"[blue]Format: {parsed_story.format}[/]")
     console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
-            # framework for future conversion/translation
-        
+    
+    
+    if command["function"].key == "convert":
+        pass
+    if command["function"].key == "extract":
+        pass
+    if command["function"].key == "render":
+        render = Render(parsed_story)
+        try:
+            rendered_story = render.render_story(parsed_story)
+        except Exception as e:
+            console.print(f"[red]{e}[/]")
+            sys.exit(1)
+        with open(command["output_path"], "w", encoding="utf-8") as f:
+            f.write(rendered_story)
+        console.print(f"[green]Story rendered and saved to {command['output_path']}[/]")
+    else:
+        console.print(f"[red]Unknown function: {command['function'].key}[/]")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

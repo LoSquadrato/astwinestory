@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, __dir__, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 from typing import Any
 
 

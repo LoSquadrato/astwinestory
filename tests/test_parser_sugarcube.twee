@@ -1,0 +1,76 @@
+:: StoryTitle  
+mage elf 0.1
+
+
+:: StoryData  
+{
+  "ifid": "328D5BF1-9B30-4BD2-BBB6-901D6BBDC166",
+  "format": "SugarCube",
+  "format-version": "2.37.3",
+  "start": "Start",
+  "tag-colors": {
+    "rapimento": "red",
+    "finale": "blue",
+    "completare": "orange",
+    "revisionare": "yellow"
+  },
+  "zoom": 0.6
+}
+
+
+:: \ **Nel covo del Boss**\ [finale] {"position":"2325,25","size":"100,100"}
+Continua il nuovo capitolo nel covo del boss.
+
+path variables:
+
+- accetta di andare con lui: sub +5
+- è troppo vai in bagno a vomitare: drug +5
+- battiti contro i nani: amico ti ha tradito per favore boss (non puoi recriminare troppo però)
+
+
+:: \ Prendi una sedia e aggiungiti alla tavolata [revisionare] {"position":"1550,200","size":"100,100"}
+Prendi una sedia e ti siedi:
+
+[[A fianco al nano eccitato]]
+[[A fianco al nano "leader"]]
+[[A fianco al nano silenzioso]]
+
+
+:: \ Siediti sulle gambe del nano che sembra il capo del gruppo  {"position":"1550,325","size":"100,100"}
+
+
+:: \ Ti sembra di perdere tempo, vai sotto al tavolo e inizia il servizio  {"position":"1450,450","size":"100,100"}
+
+
+:: "non lavoro a gratis, se vuoi scopare tira fuori i soldi  {"position":"225,875","size":"100,100"}
+
+
+:: "piuttosto mi faccio cavare gli occhi" [revisionare] {"position":"500,975","size":"100,100"}
+"Purtroppo il boss ti vuole tutto intero, ma potrei decidere di disubbidire per questa volta"
+con un ghigno allunga le mani verso di te.
+Con uno scatto sferri un calcio e gli colpisci le palle con una forza incredibile.
+Il nano si accascia a terra senza fiato. Esci di corsa dal bagno ma vieni bloccato dall'altro nano, quello che stava in bagno a pisciare, che ti afferra il polso.
+"Che cazzo fai coglione? Vuoi morire?" ti urla. Un secondo dopo una figura nera alle sue spalle allunga una mano, la metta sopra la faccia del nano. Questo molla la presa immediatamente e cade a terra. 
+Mollando la presa ti fa perdere l'equilibrio e cadere a terra.
+Le sue mani si protendono verso di te e afferrano il tuo braccio, un forte dolore, come una scossa, si espande nel tuo corpo. Svieni.
+
+[[**a cabin in the woods**]]
+
+
+:: "vuoi davvero che il tuo boss mi veda così"  {"position":"2200,1150","size":"100,100"}
+
+
+:: "vuoi davvero sentire quanto puzzerò tra un'ora" [completare] {"position":"1825,1050","size":"100,100"}
+ti avvicini alla sua faccia così che possa sentire bene il tuo alito. La sua faccia disgustata dimostra immediatamente che si è convinto.
+"Vai ma fai presto, il boss ci aspetta e sai che odia aspettare"
+
+[[muoviti verso il bagno]] 
+
+
+:: **A casa del tuo amico** [finale] {"position":"2800,100","size":"100,100"}
+Continua il nuovo capitolo a casa del tuo amico
+
+
+:: **a cabin in the woods** [finale] {"position":"375,1275","size":"100,100"}
+ti svegli in un vecchio capanno in mezzo ad una foresta
+

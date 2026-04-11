@@ -20,7 +20,6 @@ class RegexBuilder:
             "literal":         self._build_literal_pattern,
             "formatting":      self._build_formatting_pattern,
             "meta":            self._build_meta_pattern,
-            "special_passage": self._build_special_passage_pattern,
         }
         for key, builder in builders.items():
             pattern = builder()
@@ -69,7 +68,7 @@ class RegexBuilder:
             prefixes.append(re.escape(self._fmt.variables.local_prefix))
         if not prefixes:
             return None
-        return re.compile(rf'(?:{"|".join(prefixes)})\w+')
+        return re.compile(rf'(?P<var_prefix>{"|".join(prefixes)})(?P<var_name>\w+)')
 
 # todo: update macro pattern to handle stack style parsing for nested macros:
 # MACRO_START = re.compile(rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)')
@@ -111,15 +110,15 @@ class RegexBuilder:
         if separators:
             sep_pattern = '|'.join(re.escape(s) for s in separators)
             return re.compile(
-                rf'{escaped_op}'
+                rf'({escaped_op})'
                 rf'(?:(?P<link_display>.+?)(?:{sep_pattern})(?P<link_target>.+?)'
                 rf'|(?P<link_inner>[^{re.escape(cl[0])}]+?))'
-                rf'{escaped_cl}',
+                rf'({escaped_cl})',
                 re.DOTALL
             )
         else:
             return re.compile(
-                rf'{escaped_op}(?P<link_inner>[^{re.escape(cl[0])}]+?){escaped_cl}',
+                rf'({escaped_op})(?P<link_inner>[^{re.escape(cl[0])}]+?)({escaped_cl})',
                 re.DOTALL
             )
 
@@ -161,25 +160,18 @@ class RegexBuilder:
     def _build_meta_pattern(self) -> re.Pattern | None:
         if not self._fmt.meta:
             return None
-        metas = []
+        opens = []
+        closes = []
         for key, tokens in self._fmt.meta.items():
-            metas.append(
-                # key group maybe don't work, make a try
-                rf'(?P<{key}>'
-                rf'({re.escape(tokens[0])})'
-                rf'.+?'
-                rf'({re.escape(tokens[1])})'
-                rf')'
-            )
-        if not metas:
+            opens.append(re.escape(tokens[0]))
+            closes.append(re.escape(tokens[1]))
+        if not opens or not closes:
             return None
-        return re.compile(r'|'.join(metas), re.DOTALL)
-
-    def _build_special_passage_pattern(self) -> re.Pattern | None:
-        if not self._fmt.special_passages:
-            return None
-        sps = sorted(self._fmt.special_passages, key=len, reverse=True)
-        return re.compile(r'|'.join(re.escape(sp) for sp in sps))
+        return re.compile(
+            rf'(?P<meta_prefix>{"|".join(opens)})'
+            rf'(?P<meta_content>.*?)'
+            rf'(?P<meta_suffix>{"|".join(closes)})', re.DOTALL)
+        
     
     
 ######################################################################

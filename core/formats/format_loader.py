@@ -4,8 +4,9 @@ from core.formats.format_definition import FormatDefinition
 from pydantic import ValidationError as PydanticValidationError
 
 
-# FORMATS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets",
-FORMATS_DIR = "/home/losqu/workspace/github.com/LoSquadrato/StoryLoom/core/assets/formats"
+FORMATS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "assets", "formats")
+)
 
 class FormatLoaderError(Exception):
     def __init__(self, message: str):

@@ -10,10 +10,12 @@ class MenuOption:
     label: str
 
 
-# operations offered by the CLI; `key` is the internal identifier used later
-FUNCTIONS_LIST: List[MenuOption] = [
+# todo: add func field in MenuOption to call the selected function to make easier to add new functions in the future, 
+# and to handle the function execution in a more structured way
+FUNCTIONS_LIST = [    
     MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
     MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders"),
+    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path"),
 ]
 
 def display_menu(title: str, options: List[MenuOption]) -> None:

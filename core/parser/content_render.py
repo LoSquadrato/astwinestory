@@ -1,0 +1,85 @@
+from typing import List
+from core.ast import (
+    Passage,
+    Story,
+    TextNode,
+    VariableNode,
+    MacroNode,
+    LinkNode,
+    OperatorNode,
+    MetaNode,
+    LiteralNode,
+    FormattingNode
+)
+
+
+class RenderingError(Exception):
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        message = "RenderingError:\n" + "\n".join(f"- {e}" for e in errors)
+        super().__init__(message)
+        
+        
+class Render:
+    def __init__(self, story: Story):
+        self.story = story
+        
+
+    def render_node(self, content: List) -> str:
+        if len(content) == 0:
+            return ""
+        nodes = ""
+        for node in content:
+            match node:
+                case TextNode():
+                    nodes += node.value
+                case VariableNode():
+                    nodes += self.render_variable(node)
+                case MacroNode():
+                    nodes += self.render_macro(node)
+                case LinkNode():
+                    nodes += self.render_link(node)
+                case OperatorNode():
+                    nodes += node.operator
+                case MetaNode():
+                    open = self.story.format.macros[node.kind][0]
+                    close = self.story.format.macros[node.kind][1]
+                    nodes += f"{open}{node.raw}{close}"
+                case LiteralNode():
+                    nodes += node.value
+                case FormattingNode():
+                    nodes += node.value
+                case _:
+                    raise RenderingError(f"Unknown node type: {type(node)}")
+        return nodes   
+                  
+    
+    def render_story(self, story: Story):
+        renderer_story = ""
+        for passage in story.passages:
+            renderer_story += self.render_passage(passage)
+        return renderer_story
+    
+    def render_passage(self, passage: Passage) -> str:
+        name = passage.name
+        tags = f"[{passage.tags}]" if passage.tags else ""
+        metadata = f"{{{passage.metadata}}}" if passage.metadata else ""
+        renderer_passage = f":: {name} {tags} {metadata}\n"
+        return renderer_passage + self.render_node(passage.children) + "\n\n"
+    
+    def render_macro(self, macro: MacroNode) -> str:
+        op = self.story.format.macros.open
+        cl = self.story.format.macros.close
+        return f"{op}{macro.macro_type} {self.render_node(macro.children)}{cl}"
+    
+    def render_link(self, link: LinkNode) -> str:
+        op = self.story.format.links.open
+        cl = self.story.format.links.close
+        if link.display == "":
+            return f"{op}{self.render_node(link.children)}{cl}"
+        separator = self.story.format.links.separators[0]
+        return f"{op}{link.display}{separator}{self.render_node(link.children)}{cl}"
+    
+    def render_variable(self, variable: VariableNode) -> str:
+        prefix = getattr(self.story.format.variables, variable.scope)
+        return f"{prefix}{variable.name}"

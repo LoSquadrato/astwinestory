@@ -40,7 +40,7 @@ class Parser:
     def _build_node(self, kind: str, match) -> Node:
         match kind:
             case "link":
-                display = match.group("link_display")
+                display = match.group("link_display") if match.group("link_display") is not None else ""
                 target  = match.group("link_target") or match.group("link_inner")
                 return LinkNode(
                     node_id=self._next_id(),
@@ -49,11 +49,12 @@ class Parser:
                         self._patterns.build_node_content_pattern())
                     )
             case "variable":
-                var_name = match.group("variable")
-                scope = "global" if var_name.startswith(self.format_def.variables.global_prefix) else "local"
+                prefix = match.group("var_prefix")
+                name = match.group("var_name")
+                scope = "global_prefix" if prefix == self.format_def.variables.global_prefix else "local_prefix"
                 return VariableNode(
                     node_id=self._next_id(),
-                    name=var_name,
+                    name=name,
                     scope=scope
                 )
             case "macro":
@@ -73,8 +74,8 @@ class Parser:
             case "meta":
                 return MetaNode(
                     node_id=self._next_id(),
-                    kind="meta",
-                    raw=match.group("meta_raw")
+                    kind=match.group("meta_prefix"),
+                    raw=match.group("meta_content")
                 )
             case "literal":
                 return LiteralNode(
@@ -101,7 +102,7 @@ class Parser:
                 raise ParsingError([f"Error parsing passage '{title}':"] + e.errors)
         return Story(
             title=title,
-            format=self.format_def.name,
+            format=self.format_def,
             format_version=self.format_def.version,
             passages=passages
         )

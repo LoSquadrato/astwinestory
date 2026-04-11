@@ -213,8 +213,8 @@ def test_variable_node_parsing():
         )
     assert any(isinstance(node, VariableNode) for node in nodes)
     variable = next(node for node in nodes if isinstance(node, VariableNode))
-    assert variable.name == "$hero"
-    assert variable.scope == "global"
+    assert variable.name == "hero"
+    assert variable.scope == "global_prefix"
 
 
 def test_operator_node_parsing():
@@ -243,11 +243,9 @@ def test_and_or_operator_parsing():
 def test_meta_node_building():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
-    meta_match = re.match(r"(?P<meta_raw><widget myWidget>)", "<widget myWidget>")
-    assert meta_match is not None
-    node = parser._build_node("meta", meta_match)
-    assert isinstance(node, MetaNode)
-    assert node.raw == "<widget myWidget>"
+    meta_node = parser.parse_content("<meta content>", parser._patterns.build_combined_pattern(["meta"]))
+    assert len(meta_node) == 1
+    assert isinstance(meta_node[0], MetaNode)
 
 
 def test_pattern_missing_format_raises():
