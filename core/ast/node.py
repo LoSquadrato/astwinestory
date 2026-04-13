@@ -32,7 +32,13 @@ class OperatorNode(Node):
 @dataclass
 class MetaNode(Node):
     kind: str
-    raw: str
+    raw: str | list[Node]
+    
+# container for macro's hook and content    
+@dataclass
+class HookNode(Node):
+    hooked_macro_id: int
+    children: list[Node] = field(default_factory=list)
     
 @dataclass
 class LiteralNode(Node):

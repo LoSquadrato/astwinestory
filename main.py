@@ -45,7 +45,7 @@ def main() -> None:
         
     parser = Parser(format_definition)
     try:
-        parsed_story = parser.parse_story(Parser.split_passage(text))
+        parsed_story, next_node_id = parser.parse_story(Parser.split_passage(text))
     except Exception as e:
         console.print(f"[red]{e}[/]")
         sys.exit(1)
@@ -53,7 +53,7 @@ def main() -> None:
     console.print(f"[blue]Title: {parsed_story.title}[/]")
     console.print(f"[blue]Format: {parsed_story.format}[/]")
     console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
-    
+    console.print(f"[blue]Last node ID: {last_node_id}[/]")
     
     if command["function"].key == "convert":
         pass

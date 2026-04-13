@@ -17,6 +17,8 @@ class MacroDefinition(BaseModel):
     open:       str                 # '<<' | '('
     close:      str                 # '>>' | ')'
     close_tag:  str = ""
+    hook_open:  str = ""     # '[' for linear syntax, None for markup syntax
+    hook_close: str = ""     # ']' for linear syntax, None for markup syntax
     inner:      dict[str, list[str]] = {}
     
     

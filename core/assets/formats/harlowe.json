@@ -12,6 +12,8 @@
     "open": "(",
     "close": ")",
     "close_tag": "",
+    "hook_open": "[",
+    "hook_close": "]",
     "inner": {
       "control":    ["if:", "unless:", "elseif:", "else:", "for:"],
       "output":     ["print:", "display:", "show:"],

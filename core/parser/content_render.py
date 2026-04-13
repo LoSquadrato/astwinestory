@@ -83,3 +83,4 @@ class Render:
     def render_variable(self, variable: VariableNode) -> str:
         prefix = getattr(self.story.format.variables, variable.scope)
         return f"{prefix}{variable.name}"
+    

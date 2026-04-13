@@ -9,7 +9,8 @@ from core.ast.node import (
        TextNode,
        VariableNode,
        LiteralNode,
-       FormattingNode
+       FormattingNode,
+       HookNode
 )
 
 __all__ = ["Node",
@@ -22,5 +23,6 @@ __all__ = ["Node",
            "TextNode",
            "VariableNode",
            "LiteralNode",
-           "FormattingNode"
+           "FormattingNode",
+           "HookNode"
     ]
