@@ -1,169 +1,44 @@
-Below is the English translation in a technical GitHub-style format, preserving structure, terminology, and intent.
+# StoryLoom — Editor for Interactive Stories
+
+StoryLoom is a tool for parsing, translating, and converting interactive stories in Twine (`.twee`) format.
+The idea is to provide a CLI for serializing stories into a JSON intermediate format, which can then be translated or processed and re-exported into `.twee` files.
 
 ---
 
-# StoryLoom — Design Document
+## Getting Started
 
-> v0.1 — March 2026
+### Requirements
+> Python 3.11 or higher
 
----
+### Installation
 
-## Table of Contents
-
-1. [Introduction and Objective](#1-introduction-and-objective)
-2. [Version Roadmap](#2-version-roadmap)
-3. [General Pipeline](#3-general-pipeline)
-4. [File System](#4-file-system)
-5. [AST Structure](#5-ast-structure)
-6. [AI Translation System](#6-ai-translation-system)
-7. [JSON Serialization](#7-json-serialization)
-8. [Validator](#8-validator)
-9. [CLI REPL](#9-cli-repl)
-10. [Design Decisions Summary](#10-design-decisions-summary)
-11. [Next Steps — Milestone v0.1](#11-next-steps--milestone-v01)
-
----
-
-## 1. Introduction and Objective
-
-StoryLoom is a tool for parsing, validating, translating, and converting interactive stories in Twine (`.twee`) format. The project is structured into progressive milestones, starting from a functional CLI and evolving into a complete UI with integrated AI translation.
-
-This document consolidates the design decisions made during the planning phase, with particular emphasis on the AST (Abstract Syntax Tree) structure, which represents the core of the system.
-
----
-
-## 2. Version Roadmap
-
-| Version | Milestone                       | Description                                                                                                       |
-| ------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| v0.1    | REPL + Base Structure           | Interactive CLI, FileLoader, Validator, Passage Parser, full AST structure, JSON serialization, `.twee` re-export |
-| v0.2    | Harlowe Parser                  | Full parser for Harlowe syntax                                                                                    |
-| v0.3    | SugarCube Parser                | Full parser for SugarCube syntax                                                                                  |
-| v0.4    | Format Conversion               | Testing and implementation of Harlowe ↔ SugarCube conversion                                                      |
-| v0.5    | AI Translator — Single Passages | AI API integration for per-passage translation                                                                    |
-| v0.6    | AI Translator — Full Story      | Single body with `%%TX_n%%` keys, reinsertion via `node_id`                                                       |
-| v0.7    | UI                              | Graphical interface                                                                                               |
-| v0.8+   | Additional Formats & Features   | Additional parsers, translatable variable handling, advanced conditional branching                                |
-
----
-
-## 3. General Pipeline
-
+```shell
+git clone https://github.com/LoSquadrato/StoryLoom.git
+cd StoryLoom
+pip install -r requirements.txt
 ```
-.twee file
-↓
-FileLoader
-↓
-Raw Text
-↓
-Validator
-(StoryData: ifid, format, format_version, start — verifies start passage exists)
-↓
-Passage Parser
-↓
-Passage Objects
-↓
-Content Parser (Mini-AST)
-↓
-Story AST
-↓
-JSON Serialization
-↓
-CLI Action / render_nodes()
-↓
-Output File
+### Usage
+
+Have a `.twee` file ready and the [format JSON file](##JSON-Library) of the story format inside the `core/assets/formats` folder, then run the following command:
+
+```shell
+python3 main.py story.twee
 ```
+REPL Input:
+* Select Output Format from the JSON file provided inside the `core/assets/formats` folder
+* Select Function from a list menu
+* Select Output File Name (or use the one suggested by the program)
 
-The Validator runs immediately after loading the raw file, before full parsing.
-Its sole purpose is to ensure the file contains the minimum required data to produce a valid output.
+## WARNING:
+> StoryLoom is still in development and not yet stable. Make a backup of your work before using it. 
 
-No checks are performed for broken links or other internal structural issues — an author may want to process an incomplete story, and debugging story logic is not the responsibility of StoryLoom.
+> Change only story that's are your own, or that you have permission to modify. Every copyrighted work is protected by law, and StoryLoom is not responsible for any illegal use of the software.  
 
 ---
 
-## 4. File System
+## AST Structure
 
-```
-storyloom/
-│
-├── main.py                      # CLI entry point
-├── repl.py                      # Interactive REPL
-│
-├── core/
-│   ├── __init__.py
-│   ├── validator.py             # StoryData validation
-│   │
-│   ├── ast/
-│   │   ├── __init__.py
-│   │   ├── story.py             # Story class
-│   │   ├── passage.py           # Passage class
-│   │   └── nodes.py             # Node + all subclasses
-│   │
-│   ├── parser/
-│   │   ├── __init__.py
-│   │   ├── file_loader.py       # FileLoader (format-agnostic)
-│   │   ├── passage_parser.py    # Passage separation (format-agnostic)
-│   │   └── format/
-│   │       ├── harlowe/
-│   │       │   └── harlowe_parser.py
-│   │       └── sugarcube/
-│   │           └── sugarcube_parser.py
-│   │
-│   ├── serializer/
-│   │   ├── __init__.py
-│   │   └── json_serializer.py
-│   │
-│   └── renderer/
-│       ├── __init__.py
-│       ├── renderer.py          # render_nodes(text_transform)
-│       └── format/
-│           ├── harlowe/
-│           │   └── harlowe_renderer.py
-│           └── sugarcube/
-│               └── sugarcube_renderer.py
-│
-├── tests/
-│   ├── test_validator.py
-│   ├── ast/
-│   │   ├── test_story.py
-│   │   ├── test_passage.py
-│   │   └── test_nodes.py
-│   ├── parser/
-│   │   ├── test_file_loader.py
-│   │   ├── test_passage_parser.py
-│   │   └── format/
-│   │       ├── test_harlowe_parser.py
-│   │       └── test_sugarcube_parser.py
-│   ├── serializer/
-│   │   └── test_json_serializer.py
-│   └── renderer/
-│       ├── test_renderer.py
-│       └── format/
-│           ├── test_harlowe_renderer.py
-│           └── test_sugarcube_renderer.py
-│
-├── examples/
-│   ├── harlowe_sample.twee
-│   └── sugarcube_sample.twee
-│
-├── docs/
-│   └── StoryLoom_DesignDoc.md
-│
-├── requirements.txt
-└── README.md
-```
-
-`core/` separates application logic from the entry point.
-The validator lives at the root of `core/` because it is transversal to the entire system.
-Parser and renderer are symmetrical and divided by format, allowing new syntaxes to be added without modifying existing code.
-
-Tests mirror the `core/` structure for immediate navigability.
-
----
-
-## 5. AST Structure
-
-### 5.1 Overview
+### Overview
 
 The AST is organized into three hierarchical levels:
 
@@ -177,44 +52,25 @@ For translation purposes, this is not a problem: `TextNode` instances are extrac
 
 ---
 
-### 5.2 Story Class
+### Story Class
 
 Global story container. Metadata comes from the `StoryData` block in the `.twee` file.
 
 ```python
 @dataclass
 class Story:
-    ifid:            str
-    format:          str
-    format_version:  str
-    start_passage:   str
-    passages:        dict[int, Passage]
-
-    def get_passage_by_name(self, name: str) -> Passage: ...
+    title:          str
+    format:         FormatDefinition
+    format_version: str
+    passages:       list[Passage]
 ```
 
 ---
 
-### 5.3 Passage Class
-
-Represents a single passage in the `.twee` file.
-Conditionality belongs to content (`MacroNode`), not the passage itself.
-
-```python
-@dataclass
-class Passage:
-    passage_id:  int
-    name:        str
-    tags:        list[str]
-    children:    list[Node]
-```
-
----
-
-### 5.4 Node Hierarchy
+### Node Hierarchy
 
 All nodes inherit from `Node`, which only defines `node_id`.
-The ID is a globally progressive integer, unique across the entire story.
+The ID is a globally progressive integer, unique across the entire story, that can retrieve the node in the AST for translation purposes.
 
 ```python
 @dataclass
@@ -224,10 +80,25 @@ class Node:
 
 ---
 
+### Passage Class
+
+Represents a single passage in the `.twee` file.
+.   
+
+```python
+@dataclass
+class Passage(Node):
+    name:        str
+    tags:        str
+    metadata:    str
+    children:    list[Node]
+```
+
+---
+
 ### TextNode
 
 User-visible narrative text.
-**The only node type subject to AI translation.**
 
 ```python
 @dataclass
@@ -246,14 +117,14 @@ Game variable.
 @dataclass
 class VariableNode(Node):
     name:  str
-    scope: str   # 'global' | 'local' | 'unknown'
+    scope: str   # 'global' | 'local'
 ```
 
 ---
 
 ### LinkNode
 
-Navigation link to another passage.
+Navigation link to another passage. Display text is optional; if omitted, the target passage name is used as display text.
 
 ```python
 @dataclass
@@ -266,19 +137,27 @@ class LinkNode(Node):
 
 ### MacroNode
 
-Game macro (`if`, `else`, `set`, `print`, etc.).
+Game macro (`if`, `link`, `set`, `print`, etc.).
 May contain child nodes, including nested `MacroNode`.
-
-`macro_type` determines translation behavior:
-
-* `print` → string children become `TextNode` (translatable)
-* all other macros → string children become `LiteralNode` (non-translatable)
 
 ```python
 @dataclass
 class MacroNode(Node):
     macro_type: str
-    children:   list[Node]
+    children: list[Node]
+    hook: HookNode  
+```
+---
+
+### HookNode
+
+Hook node for macro content. Used to attach a macro to a specific passage or content block.
+
+```python
+@dataclass
+class HookNode(Node):
+    hooked_macro_id: int
+    children: list[Node] = field(default_factory=list)
 ```
 
 ---
@@ -308,16 +187,13 @@ class OperatorNode(Node):
 
 ---
 
-### MediaNode
-
-Multimedia asset (image, audio, video).
-Pass-through node.
-
+### FormattingNode
+Formatting node for MarkDown style formatting key (bold, italic, underline, etc.).
+    
 ```python
 @dataclass
-class MediaNode(Node):
-    media_type: str
-    source:     str
+class FormattingNode(Node):
+    value: str
 ```
 
 ---
@@ -325,48 +201,30 @@ class MediaNode(Node):
 ### MetaNode
 
 Fallback node for content that must pass through untouched
-(CSS, JavaScript, unrecognized markup).
+(CSS, JavaScript, tag, metadata).
 
 ```python
 @dataclass
 class MetaNode(Node):
-    raw: str
+    kind: str
+    raw: str | list[Node]
 ```
 
 ---
 
-## 6. AI Translation System
-
-### 6.1 General Principle
-
-Translation operates exclusively on `TextNode`.
-All other node types remain unchanged.
-
-Narrative order is irrelevant; terminological consistency is achieved by sending the entire story in a single request body.
-
----
-
-### 6.2 `render_nodes` Hook
+### HTMLNode
+HTML node for content that must pass through untouched.
 
 ```python
-def render_nodes(nodes: list[Node], text_transform=None) -> str:
-    result = []
-    for node in nodes:
-        if isinstance(node, TextNode) and text_transform:
-            result.append(text_transform(node.value))
-        elif isinstance(node, MacroNode):
-            result.append(render_nodes(node.children, text_transform))
-        else:
-            result.append(render_node(node))
-    return ''.join(result)
+@dataclass
+class HTMLNode(Node):
+    tag: str
+    body: str = ""
 ```
-
-* Re-export: `render_nodes(nodes)`
-* Translation: `render_nodes(nodes, text_transform=translate)`
 
 ---
 
-### 6.3 Full-Story Translation Key System (v0.6)
+### Full-Story Translation Key Logic
 
 Each `TextNode` is wrapped with markers:
 
@@ -375,108 +233,35 @@ Each `TextNode` is wrapped with markers:
 %%TX_13%% Still sleeping. %%/TX_13%%
 ```
 
-The AI translates the body while preserving markers.
-A post-processor extracts translated text by `node_id` and reinserts it into the AST via recursive traversal.
+The extracted text can be sent to a translation service, and the translated text can be re-inserted into the AST using the same markers.
 
 ---
 
-## 7. JSON Serialization
+## JSON Library
 
-### 7.1 v0.1 Schema
+The core of StoryLoom is a JSON library that contains all the semantics and information of Twine formats (Name, Version, Syntax Style) and the macros, links, meta delimiters, and other syntax elements.
 
-Versioned for forward compatibility.
+In the `core/assets/formats` folder you can put JSON files representing Twine formats, and StoryLoom will be able to parse and translate them.
 
-Round-trip guarantee:
+Every Twine format is represented as a `FormatDefinition` object, which is serialized into JSON for round-trip translation and re-export.
 
-```
-story.to_dict() → JSON → Story.from_dict(data)
-```
-
-Must return a semantically identical story.
+If two libraries matching most of the fields can be converted into each other, StoryLoom can translate between them.
 
 ---
 
-## 8. Validator
+## Future Work
 
-Runs after `FileLoader`, before full parsing.
-
-Checks only:
-
-* `StoryTitle` block exists
-* `StoryData` block exists
-* Contains `ifid`, `format`, `format-version`, `start`
-* `start` passage exists
-
-Nothing else.
+* Finalize the AST structure and the parsing logic.
+* Implement the conversion between different Twine formats.
+* Implement the translation logic, including the extraction of text nodes and re-insertion of translated text.
+* Implement a buffering system for reading and writing large stories, to avoid memory issues.
+* Implement a GUI for easy story management.
 
 ---
 
-## 9. CLI REPL
+## Contributing
 
-Interactive flow:
-
-```
-python3 main.py story.twee
-
-Loaded 12 passages.
-No structural errors found.
-
-Options:
-  1) Translate (WIP)
-  2) Export JSON
-  3) Re-export Twee
-  4) Exit
-```
-
-Operational rules:
-
-* No crashes on invalid input
-* Clear error messages
-* Output generated in source file directory
-* Original file is never overwritten
-
----
-
-## 10. Design Decisions Summary
-
-| Component        | Choice                         | Rationale                                  |
-| ---------------- | ------------------------------ | ------------------------------------------ |
-| Passage parsing  | Controlled regex               | Sufficient for `.twee` separation          |
-| Content          | Mini-AST Node hierarchy        | Selective translation + faithful re-export |
-| Validator        | StoryData metadata only        | Story debugging is out of scope            |
-| Passage order    | Irrelevant                     | `.twee` does not guarantee narrative order |
-| Node IDs         | Global progressive integer     | Simple, sufficient uniqueness              |
-| Translation hook | `render_nodes(text_transform)` | Same algorithm for export and translation  |
-| Translation keys | `%%TX_n%%`                     | Marked format, unlikely in natural text    |
-| Target formats   | Harlowe & SugarCube            | Different syntax, equivalent AST semantics |
-| Core             | Typed Python objects           | Type checking, autocompletion              |
-| Intermediate     | Versioned JSON                 | Forward compatibility + round-trip         |
-| CLI              | Interactive REPL               | Simple UX for early stage                  |
-| AI               | Placeholder → v0.5             | Structure ready, implementation deferred   |
-
----
-
-## 11. Next Steps — Milestone v0.1
-
-Implementation order:
-
-1. FileLoader
-2. Validator
-3. Passage Parser
-4. Content Parser (Mini-AST)
-5. JSON Serialization (full round-trip)
-6. `render_nodes()`
-7. `.twee` Re-export
-8. CLI REPL
-
-At the end of v0.1, StoryLoom will be:
-
-* A structural parser for Twine stories
-* A metadata validator
-* An intermediate JSON generator
-* A reliable `.twee` re-exporter
-
-A solid foundation for all subsequent milestones.
+Contributions are welcome! Please fork the repository and submit a pull request with your changes. Make sure to follow the coding style and include tests for any new features or bug fixes.
 
 ---
 
