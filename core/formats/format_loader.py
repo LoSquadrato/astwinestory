@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any
 from core.formats.format_definition import FormatDefinition
 from pydantic import ValidationError as PydanticValidationError
 
@@ -53,3 +54,4 @@ def _build_definition(raw: dict) -> FormatDefinition:
         return FormatDefinition.model_validate(raw)
     except PydanticValidationError as e:
         raise FormatLoaderError(f"Invalid format definition: {e}") from e
+    

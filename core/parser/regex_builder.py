@@ -13,13 +13,13 @@ class RegexBuilder:
     def _build(self) -> None:
         builders = {
             "variable":        self._build_variable_pattern,
-            "macro":           self._build_macro_start_pattern,
-            "inner":           self._build_inner_pattern, # deprecated
+            "macro":           self._build_macro_pattern,
             "link":            self._build_link_pattern,
             "operator":        self._build_operator_pattern,
             "literal":         self._build_literal_pattern,
             "formatting":      self._build_formatting_pattern,
             "meta":            self._build_meta_pattern,
+            "html":            self._build_html_pattern
         }
         for key, builder in builders.items():
             pattern = builder()
@@ -38,9 +38,9 @@ class RegexBuilder:
     
     def get_key_list(self, mode: str) -> list[str] | None:
         if mode == "passage":
-            return ["macro", "link", "variable", "meta", "formatting"]
+            return ["macro", "html", "link", "variable", "meta", "formatting"]
         elif mode == "node":
-            return ["variable", "macro", "meta", "operator", "literal", "formatting"]
+            return ["variable", "macro", "html", "meta",  "operator", "literal", "formatting"]
         else:
             return None
             
@@ -73,28 +73,18 @@ class RegexBuilder:
 # todo: update macro pattern to handle stack style parsing for nested macros:
 # MACRO_START = re.compile(rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)')
    
-    def _build_macro_start_pattern(self) -> re.Pattern | None:
+    def _build_macro_pattern(self) -> re.Pattern | None:
         if not self._fmt.macros:
             return None
         op = self._fmt.macros.open
         cl = self._fmt.macros.close
         if not op or not cl:
             return None
-        return re.compile(rf'({re.escape(op)})(?P<macro_type>\w[\w-]*:?)')
-        
-    # todo: update after resolve operator pattern builder errors
-    def _build_inner_pattern(self) -> re.Pattern | None:
-        if not self._fmt.macros or not self._fmt.macros.inner:
-            return None
-        lits = sorted(
-            (lit for lits in self._fmt.literals.values() for lit in lits),
-            key=len, reverse=True
-        )
-        if not lits:
-            return None
-        return re.compile(r'|'.join(re.escape(lit) for lit in lits))
+        return re.compile(
+            rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)\s*(?P<macro_inner>.*?){re.escape(cl)}',
+            re.DOTALL
+        )    
     
-        
     def _build_link_pattern(self) -> re.Pattern | None:
         if not self._fmt.links:
             return None
@@ -121,19 +111,21 @@ class RegexBuilder:
                 rf'({escaped_op})(?P<link_inner>[^{re.escape(cl[0])}]+?)({escaped_cl})',
                 re.DOTALL
             )
-
-# todo: DRY up the pattern builders for operator/literal/formatting/meta/special_passage, they all follow the same structure
+          
+            
     def _build_operator_pattern(self) -> re.Pattern | None:
         if not self._fmt.operators:
             return None
-        lits = sorted(
-            (lit for lits in self._fmt.operators.values() for lit in lits),
+        opts = sorted(
+            (opt for opts in self._fmt.operators.values() for opt in opts),
             key=len, reverse=True
         )
-        if not lits:
+        if not opts:
             return None
-        return re.compile(r'|'.join(re.escape(lit) for lit in lits))
+        return re.compile(r'|'.join(re.escape(opt) for opt in opts))
 
+
+    # TODO: Change the regex for capture all literals content
     def _build_literal_pattern(self) -> re.Pattern | None:
         if not self._fmt.literals:
             return None
@@ -143,7 +135,9 @@ class RegexBuilder:
         )
         if not lits:
             return None
-        return re.compile(r'|'.join(re.escape(lit) for lit in lits))
+        return re.compile(r'|'.join(rf'{re.escape(lit)}(\w.*?){re.escape(lit)}' for lit in lits))
+        # \"\w.*\"
+
 
     def _build_formatting_pattern(self) -> re.Pattern | None:
         if not self._fmt.formatting:
@@ -156,13 +150,13 @@ class RegexBuilder:
             return None
         return re.compile(r'|'.join(re.escape(f) for f in fmts))
 
-    
+
     def _build_meta_pattern(self) -> re.Pattern | None:
         if not self._fmt.meta:
             return None
         opens = []
         closes = []
-        for key, tokens in self._fmt.meta.items():
+        for tokens in self._fmt.meta.values():
             opens.append(re.escape(tokens[0]))
             closes.append(re.escape(tokens[1]))
         if not opens or not closes:
@@ -172,8 +166,19 @@ class RegexBuilder:
             rf'(?P<meta_content>.*?)'
             rf'(?P<meta_suffix>{"|".join(closes)})', re.DOTALL)
         
-    
-    
+        
+    def _build_html_pattern(self) -> re.Pattern | None:
+        if not self._fmt.html:
+            return None
+        op = self._fmt.html.open
+        cl = self._fmt.html.close
+        if not op or not cl:
+            return None
+        return re.compile(
+            rf'{re.escape(op)}(?P<html_tag>\w[\w-]*:?)\s*{re.escape(cl)}',
+            re.DOTALL
+        )
+        
 ######################################################################
     # Public builder func group pattern for parsing func
 ######################################################################
@@ -195,6 +200,12 @@ class RegexBuilder:
             r'(?:\{(?P<metadata>[^\}]*)\})?\s*$',
             re.MULTILINE
         )
+        
+    def build_passage_content_pattern(self) -> re.Pattern | None:
+        return self.build_combined_pattern(self.get_key_list("passage"))
+    
+    def build_node_content_pattern(self) -> re.Pattern | None:
+        return self.build_combined_pattern(self.get_key_list("node"))
     
     # deprecated, replaced by build_passage_content_pattern 
     # which only includes patterns valid in passage content
@@ -207,30 +218,43 @@ class RegexBuilder:
         if not parts:
             return None
         return re.compile("|".join(parts), re.DOTALL)
-    
-    def build_node_content_pattern(self) -> re.Pattern | None:
-        return self.build_combined_pattern(self.get_key_list("node"))
-    
-    def build_macro_iteration_pattern(self) -> re.Pattern | None:
+      
+    # TODO: DRY the logic so it can be used either for macro or html content, since they are similar in structure, just different tokens
+    # TODO: change name to one its more descriptive
+    def build_macro_content_pattern(self) -> re.Pattern | None:
         # after findind a macro start this pattern work with a stack based function 
         # to extract the whole macro content, including nested macros
         op = self._fmt.macros.open
         cl = self._fmt.macros.close
         if not op or not cl:
             return None
-        return re.compile(rf'({re.escape(op)})|({re.escape(cl)})', re.DOTALL)
+        close_tag = re.escape(self._fmt.macros.close_tag) if self._fmt.macros.close_tag else ""
+        macro_type = rf"(?:{close_tag})?\w[\w-]*:?"
+        return re.compile(
+            rf"{re.escape(op)}(?P<macro_type>{macro_type})(?:\s+(?P<macro_inner>.*?))?{re.escape(cl)}",
+            re.DOTALL
+        )
     
-    def build_passage_content_pattern(self) -> re.Pattern | None:
-        return self.build_combined_pattern(self.get_key_list("passage"))
-    
+    # TODO: change this name to one its more descriptive
+    # return a pattern that matches a macro with its inner content, including nested macros, links, and special passages
     def build_macro_with_stack_pattern(self) -> re.Pattern | None:
         # this pattern is used to parse the full content of a macro after it has been extracted with the stack function
         # it should match the same constructs as the macro inner pattern, but also include links and special passages, which are valid inside macros
-        op = self._fmt.macros.open
-        cl = self._fmt.macros.close
+        return self._build_macro_pattern()
+    
+    def build_html_pattern(self) -> re.Pattern | None:
+        return self._build_html_pattern()
+    
+    def build_html_content_pattern(self) -> re.Pattern | None:
+        # after findind a html start this pattern work with a stack based function 
+        # to extract the whole html content, including nested html
+        op = self._fmt.html.open
+        cl = self._fmt.html.close
         if not op or not cl:
             return None
+        close_tag = re.escape(self._fmt.html.close_tag) if self._fmt.html.close_tag else ""
+        html_type = rf"(?:{close_tag})?\w[\w-]*:?"
         return re.compile(
-            rf'{re.escape(op)}(?P<macro_type>\w[\w-]*:?)\s*(?P<macro_inner>.*){re.escape(cl)}',
+            rf"{re.escape(op)}(?P<html_tag>{html_type})(?:\s+(?P<html_inner>.*?))?{re.escape(cl)}",
             re.DOTALL
         )

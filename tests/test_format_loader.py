@@ -1,5 +1,3 @@
-import json
-import tempfile
 from pathlib import Path
 import pytest
 
@@ -11,7 +9,7 @@ def test_load_known_format():
     assert fmt.name == "SugarCube"
 
 
-def test_missing_format_raises(tmp_path):
+def test_missing_format_raises():
     with pytest.raises(FormatLoaderError) as exc:
         load_format("nonexistentformat")
     assert "Format definition not found" in str(exc.value)
@@ -28,3 +26,20 @@ def test_invalid_json(tmp_path, monkeypatch):
     with pytest.raises(FormatLoaderError) as exc:
         load_format("anything")
     assert "Invalid JSON" in str(exc.value)
+
+def test_is_outer_macro():
+    fmt = load_format("SugarCube")
+    assert fmt.is_outer_macro("if") is True
+    assert fmt.is_outer_macro("endif") is False
+    assert fmt.is_outer_macro("nonexistentmacro") is False
+    
+def test_is_special_passage():
+    fmt = load_format("SugarCube")
+    assert fmt.is_special_passage("StoryTitle") is True
+    assert fmt.is_special_passage("nonexistentpassage") is False
+    
+def test_is_variable():
+    fmt = load_format("SugarCube")
+    assert fmt.is_variable("$var") is True
+    assert fmt.is_variable("_localvar") is True
+    assert fmt.is_variable("notvar") is False

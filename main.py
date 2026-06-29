@@ -5,9 +5,7 @@ from core.parser import Parser, ParsingError, RegexBuilder
 from core.formats import load_format, FormatDefinitionError, FormatLoaderError
 from rich.console import Console
 
-from core.parser.content_render import Render
-
-console = Console()
+from core.parser.render import Render
 
 '''
 FUNCTIONS = {
@@ -24,15 +22,17 @@ def main() -> None:
 
     source_path = Path(sys.argv[1])
 
-    if not source_path.exists():
-        print(f"Error: invalid or inexistence path -> {source_path}")
+    # TODO: put all this in a loader.py file, better in a REPL class, and use it in main.py
+    try:
+        validate_path(source_path)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error: {e}")
         sys.exit(1)
 
-    if source_path.suffix.lower() not in (".twee", ".tw"):
-        print(f"Error: invalid file '{source_path.suffix}' (expected .twee or .tw)")
-        sys.exit(1)
+    console = Console()
+    
     try:
-        command = run_repl(source_path)
+        command = run_repl(source_path, console)
     except KeyboardInterrupt:
         print("\n\n  Interrupted by the user.\n")
         sys.exit(1)
@@ -53,7 +53,7 @@ def main() -> None:
     console.print(f"[blue]Title: {parsed_story.title}[/]")
     console.print(f"[blue]Format: {parsed_story.format}[/]")
     console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
-    console.print(f"[blue]Last node ID: {last_node_id}[/]")
+    
     
     if command["function"].key == "convert":
         pass
@@ -62,12 +62,12 @@ def main() -> None:
     if command["function"].key == "render":
         render = Render(parsed_story)
         try:
-            rendered_story = render.render_story(parsed_story)
+            result = command["function"].func(parsed_story)
         except Exception as e:
             console.print(f"[red]{e}[/]")
             sys.exit(1)
         with open(command["output_path"], "w", encoding="utf-8") as f:
-            f.write(rendered_story)
+            f.write(result)
         console.print(f"[green]Story rendered and saved to {command['output_path']}[/]")
     else:
         console.print(f"[red]Unknown function: {command['function'].key}[/]")
@@ -75,3 +75,9 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    
+def validate_path(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"Invalid or non-existent path: {path}")
+    if path.suffix.lower() not in (".twee", ".tw"):
+        raise ValueError(f"Invalid file extension '{path.suffix}' (expected .twee or .tw)")

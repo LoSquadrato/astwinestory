@@ -16,9 +16,16 @@ class VariableNode(Node):
     scope: str  # "global" or "local"
     
 @dataclass
+class HookNode(Node):
+    hooked_macro_id: int
+    children: list[Node] = field(default_factory=list)
+    
+# container for macro's hook and content  
+@dataclass
 class MacroNode(Node):
     macro_type: str
     children: list[Node] = field(default_factory=list)
+    hook: HookNode = None  # Optional hook node for macro content
 
 @dataclass
 class LinkNode(Node):
@@ -32,13 +39,12 @@ class OperatorNode(Node):
 @dataclass
 class MetaNode(Node):
     kind: str
-    raw: str | list[Node]
+    raw: str | list[Node] 
     
-# container for macro's hook and content    
 @dataclass
-class HookNode(Node):
-    hooked_macro_id: int
-    children: list[Node] = field(default_factory=list)
+class HTMLNode(Node):
+    tag: str
+    body: str = ""
     
 @dataclass
 class LiteralNode(Node):

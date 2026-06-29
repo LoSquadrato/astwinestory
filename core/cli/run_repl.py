@@ -1,14 +1,16 @@
 from rich.console import Console
 from pathlib import Path
 from .menus import FUNCTIONS_LIST, select_from_menu, get_format_list
-from .converter import convert, ConversionError
-from core.parser.content_parser import Parser
+from core.parser.parser import Parser
 from core.formats.format_loader import load_format, FORMATS_DIR
-
-console = Console()
 
 MAX_STORY_SIZE = 10 * 1024 * 1024  # 10 MB limit for input story
 
+class REPLError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+        
 
 def _suggest_output_path(source: Path, format: str) -> Path:
     return source.with_stem(f"{source.stem}_{format}")
@@ -52,7 +54,7 @@ def file_loader(path: Path) -> str:
     return raw
 
 
-def run_repl(path: Path) -> dict:
+def run_repl(path: Path, console: Console) -> dict:
     console.print("Welcome to StoryLoom CLI!", style="bold cyan")
     console.print(f"Using story: {path}", style="bold red")
     console.print("Please do not edit stories you do not own or have rights to.", style="bold red")

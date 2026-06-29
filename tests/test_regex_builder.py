@@ -52,12 +52,12 @@ def test_meta_pattern_builder():
     meta_pattern = rb.build_combined_pattern(["meta"])
     assert meta_pattern is not None
     # test matching a meta syntax
-    match = meta_pattern.search("<widget myWidget>")
+    match = meta_pattern.search("[widget myWidget]")
     assert match is not None
-    assert match.group("meta") == "<widget myWidget>"
-    assert match.group("meta_prefix") == "<"
+    assert match.group("meta") == "[widget myWidget]"
+    assert match.group("meta_prefix") == "["
     assert match.group("meta_content") == "widget myWidget"
-    assert match.group("meta_suffix") == ">"
+    assert match.group("meta_suffix") == "]"
     match = meta_pattern.search("{meta content}")
     assert match is not None
     assert match.group("meta") == "{meta content}"

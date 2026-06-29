@@ -20,7 +20,13 @@ class MacroDefinition(BaseModel):
     hook_open:  str = ""     # '[' for linear syntax, None for markup syntax
     hook_close: str = ""     # ']' for linear syntax, None for markup syntax
     inner:      dict[str, list[str]] = {}
+    outer:      dict[str, list[str]] = {}
     
+class HtmlDefinition(BaseModel):
+    open:  str = "<"
+    close: str = ">"
+    close_tag: str = "/"
+    outer: list[str] = []
     
 class LinkDefinition(BaseModel):
     open:             str       # '[['
@@ -47,6 +53,7 @@ class FormatDefinition(BaseModel):
     # and update regex builder to build pattern for meta based on the opening and closing tokens 
     # defined in the list, and a group for the content in between.
     meta:             dict[str, list[str]] = {}
+    html:             HtmlDefinition = None
     special_passages: list[str]            = []
 
 
@@ -66,27 +73,26 @@ class FormatDefinition(BaseModel):
                     )
         return self
 
-# Delete this? Check after renderer implementation
+
     def is_variable(self, token: str) -> bool:
         if not self.variables:
-            return False
+            raise ValueError("FormatDefinition.variables is not defined")
         return (token.startswith(self.variables.global_prefix) or
                 token.startswith(self.variables.local_prefix))
 
-# Delete this? Check after renderer implementation
-    def is_translatable_macro(self, macro_type: str) -> bool:
-        if not self.macros or not self.macros.inner:
-            return False
-        """Return True if the macro produces text output, False otherwise."""
-        # macros.inner maps categories to lists; we must search inside lists
-        for lst in self.macros.inner.values():
+    
+    def is_outer_macro(self, macro_type: str) -> bool:
+        if not self.macros or not self.macros.outer:
+            raise ValueError("FormatDefinition.macros.outer is not defined")
+        for lst in self.macros.outer.values():
             if macro_type in lst:
                 return True
         return False
     
     def is_special_passage(self, token: str) -> bool:
         if not self.special_passages:
-            return False
+            raise ValueError("FormatDefinition.special_passages is not defined")
         return token in self.special_passages   
     
-    
+    def get_syntaxtype(self) -> str:
+        return self.syntaxtype 

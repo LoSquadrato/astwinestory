@@ -2,20 +2,22 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
+from core.parser.render import story_rendering
+from core.parser.text_extractor import Extractor
 
 
 @dataclass
 class MenuOption:
     key: str
     label: str
-
+    func: callable = None  # Optional function to execute when this option is selected
 
 # todo: add func field in MenuOption to call the selected function to make easier to add new functions in the future, 
 # and to handle the function execution in a more structured way
 FUNCTIONS_LIST = [    
-    MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
-    MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders"),
-    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path"),
+    # MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
+    MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders", func=Extractor.extract_story),
+    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path", func=story_rendering),
 ]
 
 def display_menu(title: str, options: List[MenuOption]) -> None:

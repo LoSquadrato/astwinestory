@@ -1,8 +1,12 @@
-import re
+# TODO: dividiamo le macro in due gruppi: quelle che hanno un exit tag e quelle che non ce l'hanno. 
+# per la definizione delle prime è necessario sia presente anche il tag di chiusura, per le seconde no.
+# ES SugarCube: <<if>> <<print>> <<else>> <<print>> <</if>>  diventa in Harlowe: (if:)[(print:)] (else-if:)[(print:)]
+
 import textwrap
+import re
 from itertools import count
 
-
+from .extractor import MarkupExtractor
 from .regex_builder import RegexBuilder
 from core.formats.format_definition import FormatDefinition
 from core.ast import (
@@ -16,8 +20,8 @@ from core.ast import (
     MetaNode,
     LiteralNode,
     FormattingNode,
-    HookNode,
-    MacroNode
+    MacroNode,
+    HTMLNode
 )
 
 class ParsingError(Exception):
@@ -26,17 +30,25 @@ class ParsingError(Exception):
         message = "ParsingError:\n" + "\n".join(f"- {e}" for e in errors)
         super().__init__(message)
         
-
+# TODO: troppi metodi, teniamo solo le funzioni che ha senso siano metodi: next_id e build_node
+# le altre funzioni le mettiamo statiche, chiamiamo le funzioni statiche dal regex builder invece
+# di invocare sempre il campo self._patterns. 
+# In questo modo il parser diventa più snello e leggibile, e il regex builder diventa più potente 
+# e flessibile? 
 class Parser:
     def __init__(self, format_def: FormatDefinition):
         self.format_def = format_def
         self._counter = count(1)
         self._patterns = RegexBuilder(format_def)
-
+        self._extractor = MarkupExtractor(format_def, self._patterns)
+        # self._build = Builder() -- da valutare, potrebbe tornare utile
+        
     def _next_id(self) -> int:
         return next(self._counter)
     
-    def _build_node(self, kind: str, match) -> Node:
+    def _build_node(self, **kwargs) -> Node:
+        kind = kwargs.get("kind")
+        match = kwargs.get("match")
         match kind:
             case "link":
                 display = match.group("link_display") if match.group("link_display") is not None else ""
@@ -57,7 +69,23 @@ class Parser:
                     scope=scope
                 )
             case "macro":
-                raise ParsingError(["Macro nodes should be built using MacroParser, not _build_node."])
+                macro_type = kwargs.get("macro_type")
+                children = kwargs.get("children")
+                hook = kwargs.get("hook") if "hook" in kwargs else None
+                return MacroNode(
+                    node_id=self._next_id(),
+                    macro_type=macro_type,
+                    children=self.parse_content(children, self._patterns.build_node_content_pattern()) if children else [],
+                    hook=self.parse_content(hook, self._patterns.build_node_content_pattern()) if hook else None
+                )
+            case "html":
+                tag = kwargs.get("tag")
+                body = kwargs.get("body")
+                return HTMLNode(
+                    node_id=self._next_id(),
+                    tag=tag,
+                    body=body
+                )
             case "operator":
                 return OperatorNode(
                     node_id=self._next_id(),
@@ -72,26 +100,16 @@ class Parser:
             case "literal":
                 return LiteralNode(
                     node_id=self._next_id(),
-                    value=match.group("literal")
+                    value=match.group(0)
                 )
             case "formatting":
                 return FormattingNode(
                     node_id=self._next_id(),
-                    value=match.group("formatting")
+                    value=match.group(0)
                 )
             case _:
                 raise ParsingError([f"Unknown node type: {kind}"])
-            
-    
-    def _matching_node_type(self, match) -> str | None:
-        if match is None:
-            return None
-        for key in self._patterns.available():
-            if key in match.groupdict() and match.group(key) is not None:
-                return key
-        return None 
         
-    
     def parse_story(self, passage_list: list[str]) -> tuple[Story, int]:
         first_line = self.match_passage_first_line(passage_list[0])
         title = first_line.group("title") if first_line else "Untitled Story"
@@ -144,7 +162,8 @@ class Parser:
             children=children
         )
         
-
+    # TODO: Add a logic like macro extractor to parse the content of a html macro in SugarCube.
+    # 
     def parse_content(self, text: str, pattern: re.Pattern) -> list[Node]:
         if pattern is None:
             raise ParsingError(["No patterns available for this format definition"])
@@ -157,26 +176,40 @@ class Parser:
                 continue  
             if match.start() > pivot:
                 raw_text = text[pivot:match.start()]
+                # TODO: DRY this and use build_node also for text node
                 nodes.append(TextNode(node_id=self._next_id(), value=raw_text))
-                pivot = match.end()
-            kind = self._matching_node_type(match)
+                pivot = match.start()
+            kind = self._get_match_type(match)
             if kind is None:
                 raise ParsingError([f"Regex match missing group: {match}"])
-            if kind == "macro":
-                node, length = self.build_macro_node(text, match.start())
-                nodes.append(node)
-                pivot = match.start() + length
-            else:
-                node = self._build_node(kind, match)
-                nodes.append(node)
-                pivot = match.end()
+            args_builder = self.get_node_params(kind, match, text[pivot:])
+            pivot += args_builder.get("offset", len(match.group(0)))
+            node = self._build_node(**args_builder)
+            nodes.append(node)
         if pivot < len(text):
             nodes.append(TextNode(node_id=self._next_id(), value=text[pivot:]))
         # define macro groups for parsing macro's hook or macro content       
-        return self.filter_node_list(nodes) 
-          
+        return nodes
     
-        
+    # when refactoring defer to the Builder class this function may contain all kind of node
+    def get_node_params(self, kind: str, match: re.Match, text: str) -> dict:
+        if self.format_def.get_syntaxtype() == "markup" and kind == "macro":
+            return self._extractor.get_macro_params(text)
+        if self.format_def.get_syntaxtype() == "linear" and kind == "macro":
+            pass
+        if kind == "html":
+            return self._extractor.get_html_params(text)
+        return {"kind": kind, "match": match}
+    
+    
+    def _get_match_type(self, match: re.Match) -> str | None:
+        if match is None:
+            return None
+        for key in self._patterns.available():
+            if key in match.groupdict() and match.group(key) is not None:
+                return key
+        return None 
+
     def match_passage_first_line(self, text: str) -> re.Match | None:
         pattern = self._patterns.build_title_pattern()
         if pattern is None:
@@ -197,92 +230,3 @@ class Parser:
         passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
         passages_list = passage_cut.split(text)
         return [passage for passage in passages_list if passage.strip()]
-    
-    
-    def build_macro_node(self, text: str, start: int) -> tuple[MacroNode, int]:
-        full_macro_content = self._extract_macro_content(text, start)
-        full_macro_match = self._get_macro_match(full_macro_content)
-        macro_type = full_macro_match.group("macro_type")
-        macro_inner = full_macro_match.group("macro_inner")
-        macro_node = MacroNode(
-            node_id=self._next_id(),
-            macro_type=macro_type,
-            children=self.parse_content(macro_inner, self._patterns.build_node_content_pattern())
-        )
-        return macro_node, len(full_macro_content)
-    
-    def _extract_macro_content(self, text: str, start: int) -> str | None:
-        pattern = self._patterns.build_macro_iteration_pattern()
-        if pattern is None:
-            raise ParsingError(["No patterns available for this format definition"])
-        stack = 0
-        for match in pattern.finditer(text, pos=start):
-            char = match.group()
-            if char == self.format_def.macros.open:
-                stack += 1
-            elif char == self.format_def.macros.close:
-                stack -= 1
-                if stack == 0:
-                    return text[start:match.end()]
-        raise ParsingError([f"Unmatched macro starting at position {start}"])
-    
-    def _get_macro_match(self, text: str):
-        pattern = self._patterns.build_macro_with_stack_pattern()
-        if pattern is None:
-            raise ParsingError(["No patterns available for this format definition"])
-        return pattern.match(text)
-    
-    
-    def filter_node_list(self, nodes: list[Node]) -> list[Node]:
-        if not nodes:
-            return []
-        transformed_nodes = []
-        counter = 0
-        while counter < len(nodes):
-            node = nodes[counter]
-            if node is None or not isinstance(node, Node):
-                raise ParsingError("Node in nodes list must be a valid Node instance.")
-            if isinstance(node, MacroNode):
-                macro_group = self._extract_macro_hook(nodes[counter :])
-                transformed_nodes.extend(macro_group)
-                counter += len(macro_group)
-            else:
-                transformed_nodes.append(node)
-                counter += 1
-        return transformed_nodes
-
-    def _extract_macro_hook(self, node_list: list[Node]) -> list[Node]:
-        syntax_type = self.format_def.syntaxtype
-        if syntax_type == "markup":
-            return self.markup_hook_extraction(node_list)
-        elif syntax_type == "linear":
-            return self.linear_hook_extraction(node_list)
-        else:
-            raise ParsingError([f"Unsupported syntax type: {syntax_type}"])  
-        
-    def markup_hook_extraction(self, node_list: list[Node]) -> list[Node]:
-        hook_content = []
-        open_macro = node_list[0]
-        for node in node_list[1:]:
-            if isinstance(node, MacroNode) and node.macro_type == self.format_def.macros.close_tag + open_macro.macro_type:
-                hook_node = HookNode(
-                    node_id=self._next_id(),
-                    hooked_macro_id=open_macro.node_id,
-                    children=hook_content
-                )
-                return [open_macro, hook_node]
-            hook_content.append(node)
-        raise ParsingError([f"No closing macro found for macro type '{open_macro.macro_type}' with id {open_macro.node_id}"])
-    
-    def linear_hook_extraction(self, node_list: list[Node]) -> list[Node]:
-        macro = node_list[0]
-        hook = node_list[1]
-        if isinstance(hook, MetaNode):
-            parsed_hook = HookNode(
-                node_id=hook.node_id,
-                hooked_macro_id=macro.node_id,
-                children=self.parse_content(hook.raw, self._patterns.build_node_content_pattern())
-            )
-            return [macro, parsed_hook]
-        else:
-            raise ParsingError([f"Expected MetaNode as hook after macro, got {type(hook)}"])
