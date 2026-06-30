@@ -9,7 +9,8 @@ from core.ast import (
     OperatorNode,
     MetaNode,
     LiteralNode,
-    FormattingNode
+    FormattingNode,
+    HTMLNode,
 )
 
 
@@ -49,6 +50,8 @@ class Render:
                     nodes += node.value
                 case FormattingNode():
                     nodes += node.value
+                case HTMLNode():
+                    nodes += node.body
                 case _:
                     raise RenderingError(f"Unknown node type: {type(node)}")
         return nodes   
@@ -68,9 +71,29 @@ class Render:
         return renderer_passage + self._render_node(passage.children) + "\n\n"
     
     def _render_macro(self, macro: MacroNode) -> str:
+        if self.story.format.syntaxtype == "markup":
+            return self._render_macro_markup(macro)
+        elif self.story.format.syntaxtype == "linear":
+            return self._render_macro_linear(macro)
+        else:
+            raise RenderingError(f"Unknown syntax type: {self.story.format.syntaxtype}")
+    
+    def _render_macro_markup(self, macro: MacroNode) -> str:
         op = self.story.format.macros.open
         cl = self.story.format.macros.close
-        return f"{op}{macro.macro_type} {self._render_node(macro.children)}{cl}"
+        cl_tag = self.story.format.macros.close_tag
+        ch = self._render_node(macro.children)
+        hk = self._render_node(macro.hook) if macro.hook else ""
+        if self.story.format.is_outer_macro(macro.macro_type):
+            return f"{op}{macro.macro_type} {ch}{cl}{hk}{op}{cl_tag}{macro.macro_type}{ch}"
+        return f"{op}{macro.macro_type} {ch}{cl}"
+    
+    def _render_macro_linear(self, macro: MacroNode) -> str:
+        op = self.story.format.macros.open
+        cl = self.story.format.macros.close
+        ch = self._render_node(macro.children)
+        hk = self._render_node(macro.hook) if macro.hook else ""
+        return f"{op}{macro.macro_type}{ch}{cl}{hk}"
     
     def _render_link(self, link: LinkNode) -> str:
         op = self.story.format.links.open
@@ -84,6 +107,15 @@ class Render:
         prefix = getattr(self.story.format.variables, variable.scope)
         return f"{prefix}{variable.name}"
     
+    def _render_meta(self, meta: MetaNode) -> str:
+        tokens = self.story.format.get_meta_tokens(meta.kind)
+        if not tokens:
+            raise RenderingError(f"Unknown meta kind: {meta.kind}")
+        open, close = tokens
+        return f"{open}{meta.raw}{close}"
+
+# Access points for renderer
+@staticmethod    
 def story_rendering(story: Story) -> Render:
     render = Render(story)
     return render._render_story(story)

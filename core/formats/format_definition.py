@@ -96,3 +96,11 @@ class FormatDefinition(BaseModel):
     
     def get_syntaxtype(self) -> str:
         return self.syntaxtype 
+    
+    def get_meta_tokens(self, token: str) -> list[str]:
+        if not self.meta:
+            raise ValueError("FormatDefinition.meta is not defined")
+        for tokens in self.meta.values():
+            if token in tokens and len(tokens) == 2:
+                return tokens
+        return []
