@@ -219,6 +219,7 @@ class Parser:
             return match 
         return None      
     
+    
     @staticmethod
     def split_passage(text: str) -> list[str]:
         text = textwrap.dedent(text)
@@ -230,3 +231,9 @@ class Parser:
         passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
         passages_list = passage_cut.split(text)
         return [passage for passage in passages_list if passage.strip()]
+    
+    
+def story_parsing(text: str, format_def: FormatDefinition) -> tuple[Story, int]:
+    parser = Parser(format_def)
+    passages = Parser.split_passage(text)
+    return parser.parse_story(passages)

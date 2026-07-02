@@ -1,40 +1,44 @@
+import os
+
 from rich.console import Console
 from pathlib import Path
-from .menus import FUNCTIONS_LIST, select_from_menu, get_format_list
-from core.parser.parser import Parser
-from core.formats.format_loader import load_format, FORMATS_DIR
-
-MAX_STORY_SIZE = 10 * 1024 * 1024  # 10 MB limit for input story
+from .menus import select_from_menu, get_format_list
+from config import FORMATS_DIR, MAX_STORY_SIZE, SUGGESTED_OUTPUT_DIR
 
 class REPLError(Exception):
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
         
+# TODO: change func behavior to change only file name and not the whole path, 
+# the default path are savend in the config.py file. The extension are added after
+# the command function.
+def _suggest_output_path(source: Path, name: str) -> Path:
+    for p in source.iterdir():
+        if p.is_file() and p.stem == name:
+            print(f"  File name '{name}' already exists.")
+            print(f"  Using new file name: '{name}_1'")
+            name = f"{name}_1"
+    return os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}"))
 
-def _suggest_output_path(source: Path, format: str) -> Path:
-    return source.with_stem(f"{source.stem}_{format}")
-
-def _confirm_output_path(suggested: Path) -> Path:
+# TODO: the file name should be asked to the user and added to the suggested absolute path
+def _confirm_output_path() -> Path:
+    print(f"{'─' * 50}")
+    print(f"  Output path:")
+    suggested_path = os.path.abspath(SUGGESTED_OUTPUT_DIR)
+    print(f"  {suggested_path}")
     print(f"\n{'─' * 50}")
-    print(f"  Suggested output path:")
-    print(f"  {suggested}")
+    name = input("  Enter desired file name (without extension): ").strip()
+    if not name:
+        print("  ✗ Invalid input. File name cannot be empty.")
+        return _confirm_output_path()
+    if len(name) > 225:
+        print("  ✗ Invalid input. File name cannot exceed 225 characters.")
+        return _confirm_output_path()
+    path = os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}"))
     print(f"{'─' * 50}")
-    print("  [Enter] confirm suggested path")
-    print("  [path]  type an alternative path")
-    print(f"{'─' * 50}")
-
-    raw = input("  Output path: ").strip()
-
-    if raw == "":
-        return suggested
-
-    custom = Path(raw)
-    # Se l'utente digita solo un nome senza directory, usare la stessa cartella del sorgente
-    if not custom.is_absolute() and custom.parent == Path("."):
-        custom = suggested.parent / custom
-
-    return custom
+    
+    return path
 
 def file_loader(path: Path) -> str:
     # validate file exists and size before reading
@@ -54,29 +58,27 @@ def file_loader(path: Path) -> str:
     return raw
 
 
-def run_repl(path: Path, console: Console) -> dict:
+def run_repl(path: Path, console: Console, func_lst: list) -> dict:
     console.print("Welcome to StoryLoom CLI!", style="bold cyan")
     console.print(f"Using story: {path}", style="bold red")
     console.print("Please do not edit stories you do not own or have rights to.", style="bold red")
     
+    # don't need an object to store the command, just a dictionary is enough
     command = {}
 
     # ── Step 1: choose output format ───────────────────────────────────────
-    fmt_option = select_from_menu(
+    command["format"] = select_from_menu(
         "Select output format",
         get_format_list(FORMATS_DIR, format_list=[]),
     )
-    command["format"] = fmt_option
+
 
     # ── Step 2: choose operation ───────────────────────────────────────────
-    fn_option = select_from_menu("Select function", FUNCTIONS_LIST)
-    command["function"] = fn_option
+    command["function"] = select_from_menu("Select function", func_lst)
         
 
     # ── Step 3: confirm / modify output path ───────────────────────────────
-    suggested = _suggest_output_path(path, fmt_option.key)
-    output_path = _confirm_output_path(suggested)
-    command["output_path"] = output_path
+    command["output_path"] = _confirm_output_path()
 
     return command
 

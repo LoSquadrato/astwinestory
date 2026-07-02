@@ -114,8 +114,7 @@ class Render:
         open, close = tokens
         return f"{open}{meta.raw}{close}"
 
-# Access points for renderer
-@staticmethod    
+    
 def story_rendering(story: Story) -> Render:
     render = Render(story)
     return render._render_story(story)

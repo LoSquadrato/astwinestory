@@ -1,3 +1,4 @@
+from config import TEXT_EXCAPE_KEY
 from core.ast import (
     Story, 
     Passage, 
@@ -20,8 +21,8 @@ class ExtractorError(Exception):
         super().__init__(message)
 
 class Extractor:
-    def __init__(self, escaped: str):
-         self.escaped = escaped
+    def __init__(self):
+         self.escaped = TEXT_EXCAPE_KEY
          
     def extract_story(self, story: Story) -> str:
         extracted_story = ""
@@ -68,3 +69,7 @@ class Extractor:
                 case _:
                     raise ExtractorError([f"Unknown node type: {type(node)}"])
         return extracted_content
+    
+def text_extractor(story: Story) -> str:
+    extractor = Extractor()
+    return extractor.extract_story(story)

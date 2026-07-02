@@ -1,13 +1,9 @@
 import json
 import os
-from typing import Any
+from config import FORMATS_DIR
 from core.formats.format_definition import FormatDefinition
 from pydantic import ValidationError as PydanticValidationError
 
-
-FORMATS_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "assets", "formats")
-)
 
 class FormatLoaderError(Exception):
     def __init__(self, message: str):
@@ -22,10 +18,12 @@ def load_format(format_name: str) -> FormatDefinition:
 
 def _resolve_path(format_name: str) -> str:
     normalized = format_name.lower().replace(" ", "_")
+    
+    formats_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), FORMATS_DIR))
 
     candidates = [
-        os.path.join(FORMATS_DIR, f"{normalized}.json"),
-        os.path.join(FORMATS_DIR, "custom", f"{normalized}.json"),
+        os.path.join(formats_dir, f"{normalized}.json"),
+        os.path.join(formats_dir, "custom", f"{normalized}.json"),
     ]
 
     for path in candidates:
@@ -39,7 +37,6 @@ def _resolve_path(format_name: str) -> str:
 
 
 def _read_json(path: str) -> dict:
-    """Legge e deserializza il file JSON."""
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)

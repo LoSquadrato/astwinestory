@@ -1,19 +1,28 @@
 import sys
+
 from pathlib import Path
 from core.cli.run_repl import run_repl, file_loader
-from core.parser import Parser, ParsingError, RegexBuilder
-from core.formats import load_format, FormatDefinitionError, FormatLoaderError
+from core.cli.menus import MenuOption       
+from core.parser import story_parsing
+from core.formats import load_format
 from rich.console import Console
 
-from core.parser.render import Render
+from core.parser.text_extractor import text_extractor
+from core.parser.render import story_rendering
 
-'''
-FUNCTIONS = {
-    "convert": Convert,
-    "extract": Extract,
-    # "stats": "Generate statistics about the story (e.g. passage count, link count, etc.)"
-}
-'''
+# Functions available in the REPL menu, for adding new functionalities, add a new MenuOption here with the corresponding key, label, and function to execute. 
+# Every function should accept a Story object and return a string.
+FUNCTIONS_LIST = [    
+    # MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
+    MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders", func=text_extractor),
+    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path", func=story_rendering),
+]
+
+def validate_path(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"Invalid or non-existent path: {path}")
+    if path.suffix.lower() not in (".twee", ".tw"):
+        raise ValueError(f"Invalid file extension '{path.suffix}' (expected .twee or .tw)")
 
 def main() -> None:
     if len(sys.argv) != 2:
@@ -32,20 +41,18 @@ def main() -> None:
     console = Console()
     
     try:
-        command = run_repl(source_path, console)
+        command = run_repl(source_path, console, FUNCTIONS_LIST)
     except KeyboardInterrupt:
         print("\n\n  Interrupted by the user.\n")
         sys.exit(1)
         
     print(f"\n  Processing...")
-
-    text = file_loader(source_path)
-    
-    format_definition = load_format(command["format"].key)
         
-    parser = Parser(format_definition)
     try:
-        parsed_story, next_node_id = parser.parse_story(Parser.split_passage(text))
+        parsed_story, _ = story_parsing(
+            file_loader(source_path),
+            load_format(command["format"].key)
+            )
     except Exception as e:
         console.print(f"[red]{e}[/]")
         sys.exit(1)
@@ -55,29 +62,15 @@ def main() -> None:
     console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
     
     
-    if command["function"].key == "convert":
-        pass
-    if command["function"].key == "extract":
-        pass
-    if command["function"].key == "render":
-        render = Render(parsed_story)
-        try:
-            result = command["function"].func(parsed_story)
-        except Exception as e:
-            console.print(f"[red]{e}[/]")
-            sys.exit(1)
-        with open(command["output_path"], "w", encoding="utf-8") as f:
-            f.write(result)
-        console.print(f"[green]Story rendered and saved to {command['output_path']}[/]")
-    else:
-        console.print(f"[red]Unknown function: {command['function'].key}[/]")
+    try:
+        result = command["function"].func(parsed_story)
+    except Exception as e:
+        console.print(f"[red]{e}[/]")
         sys.exit(1)
+    with open(command["output_path"], "w", encoding="utf-8") as f:
+        f.write(result)
+    console.print(f"[green]Story rendered and saved to {command['output_path']}[/]")
 
 if __name__ == "__main__":
     main()
     
-def validate_path(path: Path) -> None:
-    if not path.exists():
-        raise FileNotFoundError(f"Invalid or non-existent path: {path}")
-    if path.suffix.lower() not in (".twee", ".tw"):
-        raise ValueError(f"Invalid file extension '{path.suffix}' (expected .twee or .tw)")

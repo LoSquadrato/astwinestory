@@ -1,5 +1,4 @@
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Any
 
 
 class FormatDefinitionError(Exception):
@@ -49,9 +48,6 @@ class FormatDefinition(BaseModel):
     operators:        dict[str, list[str]] = {}
     literals:         dict[str, list[str]] = {}
     formatting:       dict[str, list[str]] = {}
-    # todo: update meta field to accept only list with 2 elements, else raise error, 
-    # and update regex builder to build pattern for meta based on the opening and closing tokens 
-    # defined in the list, and a group for the content in between.
     meta:             dict[str, list[str]] = {}
     html:             HtmlDefinition = None
     special_passages: list[str]            = []
