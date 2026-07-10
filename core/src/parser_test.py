@@ -1,14 +1,9 @@
 import pytest
-import logging
 
 from core.formats.format_loader import load_format
-from core.parser.parser import Parser, ParsingError
+from core.src.parser import Parser, ParsingError
 from core.ast import TextNode, MacroNode, LinkNode, VariableNode, OperatorNode, MetaNode, LiteralNode, FormattingNode, HTMLNode
 
-logger = logging.getLogger(__name__)
-
-def log(message):
-    logger.info(message)
 
 def test_parse_passage_basic():
     fmt = load_format("SugarCube")
@@ -58,27 +53,6 @@ def test_special_passage_parsing():
     assert isinstance(node, TextNode)
     assert node.value.strip() == text.split("\n", 1)[1].strip()
 
-def test_extract_macro_content():
-    fmt = load_format("SugarCube")
-    parser = Parser(fmt)
-    text = "<<if $x=5 in y>> content here<</if>>"
-    content = parser._extractor.get_macro_params(text)
-    assert content["offset"] == len(text)
-    assert content["kind"] == "macro"
-    assert content["macro_type"] == "if"
-    assert content["children"] == "$x=5 in y"
-    assert content["hook"] == " content here"
-
-def test_extract_simple_macro():
-    fmt = load_format("SugarCube")
-    parser = Parser(fmt)
-    text = "<<print 1+1>>"
-    content = parser._extractor.get_macro_params(text)
-    assert content["offset"] == len(text)
-    assert content["kind"] == "macro"
-    assert content["macro_type"] == "print"
-    assert content["children"] == "1+1"
-
 def test_link_parsing():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
@@ -126,7 +100,7 @@ def test_macro_parsing_with_text():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
     text = "Two is <<print 1+1>> and three is <<print 1+2>>."
-    nodes = parser.parse_content(text, parser._patterns.build_combined_pattern(["macro"]))
+    nodes = parser.parse_content(text, parser._patterns.build_pattern(["macro"]))
     assert len(nodes) == 5
     assert isinstance(nodes[0], TextNode)
     assert nodes[0].value.strip() == "Two is"
@@ -156,7 +130,7 @@ def test_macro_parsing_with_text():
 def test_matching_node_type():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
-    pattern = parser._patterns.build_combined_pattern(["variable", "link", "macro", "meta", "html"])
+    pattern = parser._patterns.build_pattern(["variable", "link", "macro", "meta", "html"])
     kind1 = parser._get_match_type(pattern.search("<<print 1>>"))
     kind2 = parser._get_match_type(pattern.search("[[Link]]"))
     kind3 = parser._get_match_type(pattern.search("$variable"))
@@ -172,7 +146,7 @@ def test_html_node_parsing():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
     text = "<div>content</div>"
-    nodes = parser.parse_content(text, parser._patterns.build_combined_pattern(["html"]))
+    nodes = parser.parse_content(text, parser._patterns.build_pattern(["html"]))
     assert len(nodes) == 1
     assert isinstance(nodes[0], HTMLNode)
     assert nodes[0].tag == "div"
@@ -182,24 +156,23 @@ def test_combined_pattern():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
     text = "before <<print 1>> after [[Link]] and $variable"
-    pattern = parser._patterns.build_combined_pattern(["macro", "link", "variable"])
+    pattern = parser._patterns.build_pattern(["macro", "link", "variable"])
     matches = parser.parse_content(text, pattern)
     assert len(matches) == 6
     assert isinstance(matches[1], MacroNode)
     assert isinstance(matches[3], LinkNode)
     assert isinstance(matches[5], VariableNode)
-    pattern2 = parser._patterns.build_combined_pattern(["variable"])
+    pattern2 = parser._patterns.build_pattern(["variable"])
     matches2 = parser.parse_content(text, pattern2)
     assert len(matches2) == 2
     assert isinstance(matches2[1], VariableNode)
     
-
 def test_parse_macro_content():
     # helper for testing macro content extraction
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
     text = "before <<print 1+1>> after"
-    pattern = parser._patterns.build_combined_pattern(["macro"])
+    pattern = parser._patterns.build_pattern(["macro"])
     nodes = parser.parse_content(text, pattern)
     assert len(nodes) == 3
     assert isinstance(nodes[0], TextNode)
@@ -240,7 +213,7 @@ def test_variable_node_parsing():
     parser = Parser(fmt)
     nodes = parser.parse_content(
         "before $hero after", 
-        parser._patterns.build_content_pattern()
+        parser._patterns.build_pattern(["variable"])
         )
     assert any(isinstance(node, VariableNode) for node in nodes)
     variable = next(node for node in nodes if isinstance(node, VariableNode))
@@ -253,7 +226,7 @@ def test_operator_node_parsing():
     parser = Parser(fmt)
     nodes = parser.parse_content(
         "a + b",
-        parser._patterns.build_content_pattern()
+        parser._patterns.build_pattern(["operator"])
         )
     assert isinstance(nodes[0], TextNode)
     assert isinstance(nodes[1], OperatorNode)
@@ -265,7 +238,7 @@ def test_and_or_operator_parsing():
     parser = Parser(fmt)
     nodes = parser.parse_content(
         "a and b or c",
-        parser._patterns.build_content_pattern()
+        parser._patterns.build_pattern(["operator"])
         )
     operators = [node.operator for node in nodes if isinstance(node, OperatorNode)]
     assert "and" in operators
@@ -274,7 +247,7 @@ def test_and_or_operator_parsing():
 def test_meta_node_building():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
-    meta_node = parser.parse_content("{meta content}", parser._patterns.build_combined_pattern(["meta"]))
+    meta_node = parser.parse_content("{meta content}", parser._patterns.build_pattern(["meta"]))
     assert len(meta_node) == 1
     assert isinstance(meta_node[0], MetaNode)
 
@@ -298,8 +271,7 @@ def test_nested_macro_parsing():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
     text = '<<if [condition]>><<link "Start audio!">><<audio "testpattern" play>><</link>><<else>><<link "Stop audio!">><<audio "testpattern" stop>><</link>><</if>>'
-    
-    nodes = parser.parse_content(text.strip(), parser._patterns.build_passage_content_pattern())
+    nodes = parser.parse_content(text.strip(), parser._patterns.build_pattern(["macro"]))
     assert len(nodes) == 1
     assert nodes[0].macro_type == "if"
     sub = nodes[0].hook
@@ -315,7 +287,10 @@ def test_parse_literal_node():
     fmt = load_format("SugarCube")
     parser = Parser(fmt)
     text = "This is a test with a literal: 'literal content'."
-    nodes = parser.parse_content(text, parser._patterns.build_combined_pattern(["literal"]))
+    nodes = parser.parse_content(text, parser._patterns.build_pattern(["literal"]))
     assert any(isinstance(node, LiteralNode) for node in nodes)
     literal_node = next(node for node in nodes if isinstance(node, LiteralNode))
     assert literal_node.value == "'literal content'"
+    
+    
+

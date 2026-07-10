@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass 
-from core.parser.formats import TweeFormat, SUPPORTED_FORMAT_VERSIONS
+from core.src.formats import TweeFormat, SUPPORTED_FORMAT_VERSIONS
 
 @dataclass 
 class ValidationResult: 

@@ -29,9 +29,9 @@ def test_invalid_json(tmp_path, monkeypatch):
 
 def test_is_outer_macro():
     fmt = load_format("SugarCube")
-    assert fmt.is_outer_macro("if") is True
-    assert fmt.is_outer_macro("endif") is False
-    assert fmt.is_outer_macro("nonexistentmacro") is False
+    assert fmt.have_hook("if") is True
+    assert fmt.have_hook("endif") is False
+    assert fmt.have_hook("nonexistentmacro") is False
     
 def test_is_special_passage():
     fmt = load_format("SugarCube")

@@ -10,6 +10,11 @@ __pycache__*
 *.log
 *.zip
 *.story
+*.twee
+*.txt
 
 # tests
 *.ini
+
+
+

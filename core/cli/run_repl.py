@@ -10,10 +10,8 @@ class REPLError(Exception):
         self.message = message
         super().__init__(message)
         
-# TODO: change func behavior to change only file name and not the whole path, 
-# the default path are savend in the config.py file. The extension are added after
-# the command function.
-def _suggest_output_path(source: Path, name: str) -> Path:
+
+def _validate_output_path(source: Path, name: str) -> Path:
     for p in source.iterdir():
         if p.is_file() and p.stem == name:
             print(f"  File name '{name}' already exists.")
@@ -21,7 +19,7 @@ def _suggest_output_path(source: Path, name: str) -> Path:
             name = f"{name}_1"
     return os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}"))
 
-# TODO: the file name should be asked to the user and added to the suggested absolute path
+
 def _confirm_output_path() -> Path:
     print(f"{'─' * 50}")
     print(f"  Output path:")
@@ -35,16 +33,15 @@ def _confirm_output_path() -> Path:
     if len(name) > 225:
         print("  ✗ Invalid input. File name cannot exceed 225 characters.")
         return _confirm_output_path()
-    path = os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}"))
+    path = _validate_output_path(SUGGESTED_OUTPUT_DIR, name)
     print(f"{'─' * 50}")
     
     return path
 
+# Validate file exists and size before reading
 def file_loader(path: Path) -> str:
-    # validate file exists and size before reading
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"Story not found or not a file: {path}")
-
     size = path.stat().st_size
     if size == 0:
         raise ValueError("Input story is empty")
@@ -63,7 +60,6 @@ def run_repl(path: Path, console: Console, func_lst: list) -> dict:
     console.print(f"Using story: {path}", style="bold red")
     console.print("Please do not edit stories you do not own or have rights to.", style="bold red")
     
-    # don't need an object to store the command, just a dictionary is enough
     command = {}
 
     # ── Step 1: choose output format ───────────────────────────────────────
@@ -72,11 +68,9 @@ def run_repl(path: Path, console: Console, func_lst: list) -> dict:
         get_format_list(FORMATS_DIR, format_list=[]),
     )
 
-
     # ── Step 2: choose operation ───────────────────────────────────────────
     command["function"] = select_from_menu("Select function", func_lst)
         
-
     # ── Step 3: confirm / modify output path ───────────────────────────────
     command["output_path"] = _confirm_output_path()
 

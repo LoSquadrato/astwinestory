@@ -1,7 +1,7 @@
 from core.ast.node import FormattingNode, LinkNode, LiteralNode, MacroNode, MetaNode, OperatorNode, TextNode, VariableNode
 from core.formats.format_definition import FormatDefinition
 from core.ast import Story, Passage, Node
-from core.parser.macro_transformer import Transformer
+from core.src.macro_transformer import Transformer
 
 class ConverterError(Exception):
     def __init__(self, errors: list[str]):

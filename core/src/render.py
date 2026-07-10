@@ -84,7 +84,7 @@ class Render:
         cl_tag = self.story.format.macros.close_tag
         ch = self._render_node(macro.children)
         hk = self._render_node(macro.hook) if macro.hook else ""
-        if self.story.format.is_outer_macro(macro.macro_type):
+        if self.story.format.have_hook(macro.macro_type):
             return f"{op}{macro.macro_type} {ch}{cl}{hk}{op}{cl_tag}{macro.macro_type}{ch}"
         return f"{op}{macro.macro_type} {ch}{cl}"
     

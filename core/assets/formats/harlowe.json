@@ -14,8 +14,17 @@
     "close_tag": "",
     "hook_open": "[",
     "hook_close": "]",
-    "inner": {
-      "control":    ["if:", "unless:", "elseif:", "else:", "for:"],
+    "hooked": {
+      "control_opener": ["if:", "unless:"],
+      "control_continue": ["elseif:", "else:"],
+      "looping": ["for:"],
+      "output": ["link:", "click:", "link-repeat:", "replace:"],
+      "story": ["event:"],
+      "style": ["font:", "css:", "transition-arrive", "transition-depart"],
+      "assignment": ["append:"],
+      "timer": ["after:", "live:"]
+    },
+    "plain": {
       "output":     ["print:", "display:", "show:"],
       "assignment": ["set:", "put:", "move:", "unpack:"],
       "media":      ["icon-rotate:", "icon-counter:"],
@@ -53,9 +62,14 @@
   "meta": {
     "image": ["[img[", "]]"],
     "metadata": ["{", "}"],
-    "tag" : ["[", "]"],
-    "html" : ["<", ">"],
-    "script" : ["<script>", "</script>"]
+    "tag" : ["[", "]"]
+  },
+
+  "html": {
+    "open": "<",
+    "close": ">",
+    "close_tag": "/",
+    "html_tag": ["div", "span", "p", "script", "style"] 
   },
 
   "special_passages": [

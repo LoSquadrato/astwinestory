@@ -12,14 +12,14 @@
     "open": "<<",
     "close": ">>",
     "close_tag": "/",
-    "outer": {
+    "hooked": {
       "control":  ["if", "for"],
       "output":   ["link", "linkreplace", "widget", "replace", "type"],
       "script":   ["script", "div"],
       "silently": ["silently"],
       "timed":    ["timed","repeat"]
     },
-    "inner": {
+    "plain": {
       "control":    ["elseif", "else", "for", "switch", "case", "default"],
       "navigation": ["back", "goto"],
       "output":     ["print", "=", "include", "nobr"],
@@ -70,7 +70,7 @@
     "open": "<",
     "close": ">",
     "close_tag": "/",
-    "outer": ["div", "span", "p", "script", "style"] 
+    "html_tag": ["div", "span", "p", "script", "style"] 
   },
 
 

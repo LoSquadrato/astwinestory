@@ -3,12 +3,12 @@ import sys
 from pathlib import Path
 from core.cli.run_repl import run_repl, file_loader
 from core.cli.menus import MenuOption       
-from core.parser import story_parsing
+from core.src import story_parsing
 from core.formats import load_format
 from rich.console import Console
 
-from core.parser.text_extractor import text_extractor
-from core.parser.render import story_rendering
+from core.src.text_extractor import text_extractor
+from core.src.render import story_rendering
 
 # Functions available in the REPL menu, for adding new functionalities, add a new MenuOption here with the corresponding key, label, and function to execute. 
 # Every function should accept a Story object and return a string.

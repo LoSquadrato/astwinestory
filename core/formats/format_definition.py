@@ -18,14 +18,14 @@ class MacroDefinition(BaseModel):
     close_tag:  str = ""
     hook_open:  str = ""     # '[' for linear syntax, None for markup syntax
     hook_close: str = ""     # ']' for linear syntax, None for markup syntax
-    inner:      dict[str, list[str]] = {}
-    outer:      dict[str, list[str]] = {}
+    hooked:      dict[str, list[str]] = {}
+    plain:      dict[str, list[str]] = {}
     
 class HtmlDefinition(BaseModel):
     open:  str = "<"
     close: str = ">"
     close_tag: str = "/"
-    outer: list[str] = []
+    html_tags: list[str] = []
     
 class LinkDefinition(BaseModel):
     open:             str       # '[['
@@ -77,10 +77,10 @@ class FormatDefinition(BaseModel):
                 token.startswith(self.variables.local_prefix))
 
     
-    def is_outer_macro(self, macro_type: str) -> bool:
-        if not self.macros or not self.macros.outer:
-            raise ValueError("FormatDefinition.macros.outer is not defined")
-        for lst in self.macros.outer.values():
+    def have_hook(self, macro_type: str) -> bool:
+        if not self.macros or not self.macros.hooked:
+            raise ValueError("FormatDefinition.macros.hooked is not defined")
+        for lst in self.macros.hooked.values():
             if macro_type in lst:
                 return True
         return False
@@ -89,9 +89,7 @@ class FormatDefinition(BaseModel):
         if not self.special_passages:
             raise ValueError("FormatDefinition.special_passages is not defined")
         return token in self.special_passages   
-    
-    def get_syntaxtype(self) -> str:
-        return self.syntaxtype 
+     
     
     def get_meta_tokens(self, token: str) -> list[str]:
         if not self.meta:
@@ -100,3 +98,25 @@ class FormatDefinition(BaseModel):
             if token in tokens and len(tokens) == 2:
                 return tokens
         return []
+    
+    def is_control_macro_opener(self, macro_type: str) -> bool:
+        hooked = self.get_hooked_macros()
+        if "control_opener" in hooked and macro_type in hooked["control_opener"]:
+            return True
+        return False
+    
+    def is_control_macro_continue(self, macro_type: str) -> bool:
+        hooked = self.get_hooked_macros()
+        if "control_continue" in hooked and macro_type in hooked["control_continue"]:
+            return True
+        return False
+    
+    def get_syntaxtype(self) -> str:
+        if not self.syntaxtype:
+            raise ValueError("FormatDefinition.syntaxtype is not defined")
+        return self.syntaxtype
+    
+    def get_hooked_macros(self) -> dict[str, list[str]]:
+        if not self.macros or not self.macros.hooked:
+            raise ValueError("FormatDefinition.macros.hooked is not defined")
+        return self.macros.hooked

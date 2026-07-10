@@ -39,7 +39,7 @@ class OperatorNode(Node):
 @dataclass
 class MetaNode(Node):
     kind: str
-    raw: str | list[Node] 
+    raw: str 
     
 @dataclass
 class HTMLNode(Node):

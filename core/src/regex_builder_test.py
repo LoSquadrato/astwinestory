@@ -1,7 +1,7 @@
 import pytest
 import re
 from core.formats.format_loader import load_format, FormatLoaderError, _build_definition
-from core.parser.regex_builder import RegexBuilder
+from core.src.regex_builder import RegexBuilder
 
 
 def test_available_keys_for_sugarcube():
@@ -9,7 +9,7 @@ def test_available_keys_for_sugarcube():
     rb = RegexBuilder(fmt)
     keys = rb.available()
     # expect at least these
-    combined = rb.build_combined_pattern(keys)
+    combined = rb.build_pattern(keys)
     assert isinstance(combined, re.Pattern)
     # try matching a macro syntax
     assert combined.search("<<print 1>>")
@@ -26,7 +26,7 @@ def test_empty_format_has_no_patterns():
     fmt = _build_definition(empty_syntax)
     rb = RegexBuilder(fmt)
     assert rb.available() == []
-    assert rb.build_combined_pattern(["variable", "link", "macro"]) is None
+    assert rb.build_pattern(["variable", "link", "macro"]) is None
     assert isinstance(rb.build_title_pattern(), re.Pattern)
     assert rb.get("variable") is None
 
@@ -37,7 +37,7 @@ def test_empty_format_raises_error():
 def test_combined_pattern_builder():
     fmt = load_format("SugarCube")
     rb = RegexBuilder(fmt)
-    combined = rb.build_combined_pattern(["variable", "link", "macro"])
+    combined = rb.build_pattern(["variable", "link", "macro"])
     assert combined is not None
     # test matching a variable
     assert combined.search("$variable")
@@ -49,7 +49,7 @@ def test_combined_pattern_builder():
 def test_meta_pattern_builder():
     fmt = load_format("SugarCube")
     rb = RegexBuilder(fmt)
-    meta_pattern = rb.build_combined_pattern(["meta"])
+    meta_pattern = rb.build_pattern(["meta"])
     assert meta_pattern is not None
     # test matching a meta syntax
     match = meta_pattern.search("[widget myWidget]")

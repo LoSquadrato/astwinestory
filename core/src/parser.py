@@ -6,7 +6,7 @@ import textwrap
 import re
 from itertools import count
 
-from .extractor import MarkupExtractor
+from .extractor import Extractor
 from .regex_builder import RegexBuilder
 from core.formats.format_definition import FormatDefinition
 from core.ast import (
@@ -30,17 +30,13 @@ class ParsingError(Exception):
         message = "ParsingError:\n" + "\n".join(f"- {e}" for e in errors)
         super().__init__(message)
         
-# TODO: troppi metodi, teniamo solo le funzioni che ha senso siano metodi: next_id e build_node
-# le altre funzioni le mettiamo statiche, chiamiamo le funzioni statiche dal regex builder invece
-# di invocare sempre il campo self._patterns. 
-# In questo modo il parser diventa più snello e leggibile, e il regex builder diventa più potente 
-# e flessibile? 
+        
 class Parser:
     def __init__(self, format_def: FormatDefinition):
         self.format_def = format_def
         self._counter = count(1)
         self._patterns = RegexBuilder(format_def)
-        self._extractor = MarkupExtractor(format_def, self._patterns)
+        self._extractor = Extractor(format_def, self._patterns)
         # self._build = Builder() -- da valutare, potrebbe tornare utile
         
     def _next_id(self) -> int:
@@ -194,9 +190,9 @@ class Parser:
     # when refactoring defer to the Builder class this function may contain all kind of node
     def get_node_params(self, kind: str, match: re.Match, text: str) -> dict:
         if self.format_def.get_syntaxtype() == "markup" and kind == "macro":
-            return self._extractor.get_macro_params(text)
+            return self._extractor.get_macro_params_markup(text)
         if self.format_def.get_syntaxtype() == "linear" and kind == "macro":
-            pass
+            return self._extractor.get_macro_params_linear(text)
         if kind == "html":
             return self._extractor.get_html_params(text)
         return {"kind": kind, "match": match}

@@ -19,7 +19,7 @@ def load_format(format_name: str) -> FormatDefinition:
 def _resolve_path(format_name: str) -> str:
     normalized = format_name.lower().replace(" ", "_")
     
-    formats_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), FORMATS_DIR))
+    formats_dir = os.path.abspath(os.path.join(FORMATS_DIR))
 
     candidates = [
         os.path.join(formats_dir, f"{normalized}.json"),
