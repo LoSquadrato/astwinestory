@@ -15,7 +15,7 @@ def _validate_output_path(source: Path, name: str) -> Path:
     for p in source.iterdir():
         if p.is_file() and p.stem == name:
             print(f"  File name '{name}' already exists.")
-            print(f"  Using new file name: '{name}_1'")
+            print(f"  Using new file name: '{name}_1'") # in the future, we can add a loop to increment the number until a unique name is found
             name = f"{name}_1"
     return os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}"))
 
