@@ -1,5 +1,5 @@
-from core.src.regex_builder import RegexBuilder
 from core.src.extractor import Extractor
+from core.src.regex_builder import RegexBuilder
 from core.formats import load_format
 
 #########################################################

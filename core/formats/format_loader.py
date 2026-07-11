@@ -1,7 +1,7 @@
 import json
 import os
-from config import FORMATS_DIR
-from core.formats.format_definition import FormatDefinition
+from core.config import FORMATS_DIR
+from core.formats import FormatDefinition
 from pydantic import ValidationError as PydanticValidationError
 
 

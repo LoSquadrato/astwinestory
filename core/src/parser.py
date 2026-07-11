@@ -6,9 +6,9 @@ import textwrap
 import re
 from itertools import count
 
-from .extractor import Extractor
-from .regex_builder import RegexBuilder
-from core.formats.format_definition import FormatDefinition
+from core.formats import FormatDefinition
+from core.src.extractor import Extractor
+from core.src.regex_builder import RegexBuilder 
 from core.ast import (
     Node,
     Passage,
@@ -107,10 +107,16 @@ class Parser:
                 raise ParsingError([f"Unknown node type: {kind}"])
         
     def parse_story(self, passage_list: list[str]) -> tuple[Story, int]:
-        first_line = self.match_passage_first_line(passage_list[0])
-        title = first_line.group("title") if first_line else "Untitled Story"
+        title = "" 
         passages= []
         for passage in passage_list:
+            match = self.match_passage_first_line(passage)
+            passage_name = match.group("title") if match else None
+            if passage_name is None:
+                raise ParsingError([f"Passage missing title: {passage[:30]}..."])
+            if passage_name == "StoryTitle":
+                title = passage[match.end():].strip().splitlines()[0].strip()
+                continue
             try:
                 passages.append(self.parse_passage(passage))
             except ParsingError as e:
@@ -214,7 +220,6 @@ class Parser:
         if match:
             return match 
         return None      
-    
     
     @staticmethod
     def split_passage(text: str) -> list[str]:

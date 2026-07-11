@@ -4,6 +4,9 @@ StoryLoom is a tool for parsing, translating, and converting interactive stories
 The idea is to provide a CLI for serializing stories into a JSON intermediate format, which can then be translated or processed and re-exported into `.twee` files.
 
 ---
+![StoryLoom](docs/Readme.png)
+
+---
 
 ## Getting Started
 
@@ -15,15 +18,27 @@ The idea is to provide a CLI for serializing stories into a JSON intermediate fo
 ```shell
 git clone https://github.com/LoSquadrato/StoryLoom.git
 cd StoryLoom
+```
+Create a virtual environment and activate it:
+
+```shell
+python3 -m venv .venv
+source .venv/bin/activate
+```
+Then install the required dependencies:
+
+```shell
 pip install -r requirements.txt
+
 ```
 ### Usage
 
-Have a `.twee` file ready and the [format JSON file](##JSON-Library) of the story format inside the `core/assets/formats` folder, then run the following command:
+Have a `.twee` file ready and the [format JSON file](##JSON-Library) of the story format inside the `core/assets/formats` folder, `cd` inside the StoryLoom root path, activate virtual enviroment (`source .venv/bin/activate`) then run the following command:
 
 ```shell
 python3 main.py story.twee
 ```
+
 REPL Input:
 * Select Output Format from the JSON file provided inside the `core/assets/formats` folder
 * Select Function from a list menu

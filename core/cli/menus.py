@@ -9,8 +9,9 @@ class MenuOption:
     key: str
     label: str
     func: callable = None  # Optional function to execute when this option is selected
+    extension: str = None  # Optional file extension associated with this option
 
-def display_menu(title: str, options: List[MenuOption]) -> None:
+def _display_menu(title: str, options: List[MenuOption]) -> None:
     print(f"\n{'─' * 50}")
     print(f"  {title}")
     print(f"{'─' * 50}")
@@ -20,7 +21,7 @@ def display_menu(title: str, options: List[MenuOption]) -> None:
 
 def select_from_menu(title: str, options: List[MenuOption]) -> MenuOption:
     while True:
-        display_menu(title, options)
+        _display_menu(title, options)
         raw = input("  Choice: ").strip()
         if raw.isdigit():
             idx = int(raw) - 1

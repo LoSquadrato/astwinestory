@@ -1,8 +1,8 @@
 import pytest
 
-from core.formats.format_loader import load_format
+from core.formats import load_format
 from core.src.parser import Parser, ParsingError
-from core.ast import TextNode, MacroNode, LinkNode, VariableNode, OperatorNode, MetaNode, LiteralNode, FormattingNode, HTMLNode
+from core.ast import TextNode, MacroNode, LinkNode, VariableNode, OperatorNode, MetaNode, LiteralNode, HTMLNode
 
 
 def test_parse_passage_basic():

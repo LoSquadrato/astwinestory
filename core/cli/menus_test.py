@@ -1,5 +1,4 @@
-import pytest
-from core.cli.menus import MenuOption, display_menu, select_from_menu
+from core.cli.menus import MenuOption, select_from_menu, get_format_list
 
 
 def test_menu_selection_simple(monkeypatch, capsys):
@@ -29,26 +28,6 @@ def test_get_format_list(tmp_path):
     sub = d / "sub"
     sub.mkdir()
     (sub / "baz.json").write_text("{}")
-    from core.cli.menus import get_format_list
     results = get_format_list(d, format_list=[])
     keys = {opt.key for opt in results}
     assert keys == {"foo", "bar", "baz"}
-
-
-def test_suggest_and_confirm(tmp_path, monkeypatch):
-    from core.cli.run_repl import _suggest_output_path, _confirm_output_path
-    source = tmp_path / "story.twee"
-    source.write_text("hello")
-    sug = _suggest_output_path(source, "foo")
-    assert sug.name == "story_foo.twee"
-    # confirm default
-    monkeypatch.setattr('builtins.input', lambda prompt='': '')
-    assert _confirm_output_path(sug) == sug
-    # custom path relative
-    monkeypatch.setattr('builtins.input', lambda prompt='': 'custom.tw')
-    out = _confirm_output_path(sug)
-    assert out.name == 'custom.tw' and out.parent == source.parent
-    # absolute custom path
-    abs_path = tmp_path / 'other.tw'
-    monkeypatch.setattr('builtins.input', lambda prompt='': str(abs_path))
-    assert _confirm_output_path(sug) == abs_path

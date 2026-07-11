@@ -1,5 +1,5 @@
 import re
-from core.formats.format_definition import FormatDefinition
+from core.formats import FormatDefinition
 
 
 class RegexBuilder:

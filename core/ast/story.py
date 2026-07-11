@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from core.formats.format_definition import FormatDefinition
-from .node import Passage
+from core.formats import FormatDefinition
+from core.ast.node import Passage
 
 
 @dataclass

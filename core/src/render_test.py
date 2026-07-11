@@ -1,6 +1,5 @@
-import pytest
-from core.src.render import Render, RenderingError, story_rendering
-from core.src import Parser
+from core.src import story_rendering
+from core.src.parser import Parser
 from core.formats import load_format
 
 def test_render():

@@ -1,6 +1,6 @@
 import pytest
 import re
-from core.formats.format_loader import load_format, FormatLoaderError, _build_definition
+from core.formats import load_format, FormatLoaderError, FormatDefinition
 from core.src.regex_builder import RegexBuilder
 
 
@@ -23,7 +23,7 @@ def test_empty_format_has_no_patterns():
         "variables": {"global_prefix": "", "local_prefix": ""},
         "links": {"open": "", "close": ""}       
     }
-    fmt = _build_definition(empty_syntax)
+    fmt = FormatDefinition(empty_syntax)
     rb = RegexBuilder(fmt)
     assert rb.available() == []
     assert rb.build_pattern(["variable", "link", "macro"]) is None
@@ -32,7 +32,7 @@ def test_empty_format_has_no_patterns():
 
 def test_empty_format_raises_error():
     with pytest.raises(FormatLoaderError):
-        _build_definition({"name": "Empty", "version": "1", "variables": None, "links": None})
+        FormatDefinition({"name": "Empty", "version": "1", "variables": None, "links": None})
         
 def test_combined_pattern_builder():
     fmt = load_format("SugarCube")

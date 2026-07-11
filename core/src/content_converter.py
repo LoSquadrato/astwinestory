@@ -1,3 +1,4 @@
+# Not implemented yet, but this is where the conversion logic will go.
 from core.ast.node import FormattingNode, LinkNode, LiteralNode, MacroNode, MetaNode, OperatorNode, TextNode, VariableNode
 from core.formats.format_definition import FormatDefinition
 from core.ast import Story, Passage, Node

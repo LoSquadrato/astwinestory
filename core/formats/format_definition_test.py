@@ -1,5 +1,4 @@
-from core.formats.format_definition import FormatDefinition
-from core.formats.format_loader import load_format
+from core.formats import load_format
 
 def test_is_control_macro_opener():
     fmt = load_format("Harlowe")

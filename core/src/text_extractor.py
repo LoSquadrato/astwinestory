@@ -1,4 +1,4 @@
-from config import TEXT_EXCAPE_KEY
+from core.config import TEXT_EXCAPE_KEY
 from core.ast import (
     Story, 
     Passage, 

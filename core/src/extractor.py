@@ -1,6 +1,6 @@
 import re
 
-from core.formats.format_definition import FormatDefinition
+from core.formats import FormatDefinition
 from core.src.regex_builder import RegexBuilder
 
 class ExtractorError(Exception):

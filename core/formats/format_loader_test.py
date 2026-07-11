@@ -1,7 +1,6 @@
-from pathlib import Path
 import pytest
 
-from core.formats.format_loader import load_format, FormatLoaderError, FORMATS_DIR
+from core.formats import load_format, FormatLoaderError
 
 
 def test_load_known_format():

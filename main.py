@@ -1,21 +1,17 @@
 import sys
-
-from pathlib import Path
-from core.cli.run_repl import run_repl, file_loader
-from core.cli.menus import MenuOption       
-from core.src import story_parsing
-from core.formats import load_format
 from rich.console import Console
+from pathlib import Path
 
-from core.src.text_extractor import text_extractor
-from core.src.render import story_rendering
+from core.cli import MenuOption, run_repl, file_loader    
+from core.src import story_parsing, story_rendering
+from core.formats import load_format
 
 # Functions available in the REPL menu, for adding new functionalities, add a new MenuOption here with the corresponding key, label, and function to execute. 
 # Every function should accept a Story object and return a string.
 FUNCTIONS_LIST = [    
     # MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
-    MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders", func=text_extractor),
-    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path", func=story_rendering),
+    # MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders", func=text_extractor),
+    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path", func=story_rendering, extension=".twee"),
 ]
 
 def validate_path(path: Path) -> None:

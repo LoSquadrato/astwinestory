@@ -2,25 +2,30 @@ import os
 
 from rich.console import Console
 from pathlib import Path
-from .menus import select_from_menu, get_format_list
-from config import FORMATS_DIR, MAX_STORY_SIZE, SUGGESTED_OUTPUT_DIR
+from core.cli.menus import select_from_menu, get_format_list
+from core.config import FORMATS_DIR, MAX_STORY_SIZE, SUGGESTED_OUTPUT_DIR
 
-class REPLError(Exception):
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(message)
-        
 
-def _validate_output_path(source: Path, name: str) -> Path:
+
+def _validate_output_path(source: Path, name: str, ext: str) -> Path:
+    if not source.exists():
+        os.makedirs(source)
     for p in source.iterdir():
         if p.is_file() and p.stem == name:
-            print(f"  File name '{name}' already exists.")
-            print(f"  Using new file name: '{name}_1'") # in the future, we can add a loop to increment the number until a unique name is found
-            name = f"{name}_1"
-    return os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}"))
+            i = 1
+            while True:
+                new_name = f"{name}_{i}"
+                new_path = source / f"{new_name}{ext}"
+                if not new_path.exists():
+                    name = new_name
+                    break
+                i += 1
+            print(f"  File name you choose already exist")
+            print(f"  Using this file name: {name}{ext}")
+    return os.path.abspath(os.path.join(SUGGESTED_OUTPUT_DIR, f"{name}{ext}"))
 
 
-def _confirm_output_path() -> Path:
+def _confirm_output_path(ext: str) -> Path:
     print(f"{'─' * 50}")
     print(f"  Output path:")
     suggested_path = os.path.abspath(SUGGESTED_OUTPUT_DIR)
@@ -33,7 +38,7 @@ def _confirm_output_path() -> Path:
     if len(name) > 225:
         print("  ✗ Invalid input. File name cannot exceed 225 characters.")
         return _confirm_output_path()
-    path = _validate_output_path(SUGGESTED_OUTPUT_DIR, name)
+    path = _validate_output_path(Path(suggested_path), name, ext)
     print(f"{'─' * 50}")
     
     return path
@@ -56,7 +61,20 @@ def file_loader(path: Path) -> str:
 
 
 def run_repl(path: Path, console: Console, func_lst: list) -> dict:
-    console.print("Welcome to StoryLoom CLI!", style="bold cyan")
+    title = r'''
+ $$$$$$\    $$\                                   $$\                                        
+$$  __$$\   $$ |                                  $$ |                                       
+$$ /  \__|$$$$$$\    $$$$$$\   $$$$$$\  $$\   $$\ $$ |      $$$$$$\   $$$$$$\  $$$$$$\$$$$\  
+\$$$$$$\  \_$$  _|  $$  __$$\ $$  __$$\ $$ |  $$ |$$ |     $$  __$$\ $$  __$$\ $$  _$$  _$$\ 
+ \____$$\   $$ |    $$ /  $$ |$$ |  \__|$$ |  $$ |$$ |     $$ /  $$ |$$ /  $$ |$$ / $$ / $$ |
+$$\   $$ |  $$ |$$\ $$ |  $$ |$$ |      $$ |  $$ |$$ |     $$ |  $$ |$$ |  $$ |$$ | $$ | $$ |
+\$$$$$$  |  \$$$$  |\$$$$$$  |$$ |      \$$$$$$$ |$$$$$$$$\\$$$$$$  |\$$$$$$  |$$ | $$ | $$ |
+ \______/    \____/  \______/ \__|       \____$$ |\________|\______/  \______/ \__| \__| \__|
+                                        $$\   $$ |                                           
+                                        \$$$$$$  |                                           
+                                         \______/                                            
+'''
+    console.print(title, style="bold cyan")
     console.print(f"Using story: {path}", style="bold red")
     console.print("Please do not edit stories you do not own or have rights to.", style="bold red")
     
@@ -72,8 +90,9 @@ def run_repl(path: Path, console: Console, func_lst: list) -> dict:
     command["function"] = select_from_menu("Select function", func_lst)
         
     # ── Step 3: confirm / modify output path ───────────────────────────────
-    command["output_path"] = _confirm_output_path()
+    command["output_path"] = _confirm_output_path(command["function"].extension)
 
     return command
+
 
 

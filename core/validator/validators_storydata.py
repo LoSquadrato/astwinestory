@@ -1,3 +1,5 @@
+# Not implemented yet, but this file will contain the validation logic for story data.
+
 import uuid
 from dataclasses import dataclass 
 from core.src.formats import TweeFormat, SUPPORTED_FORMAT_VERSIONS

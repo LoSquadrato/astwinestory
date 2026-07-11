@@ -202,7 +202,7 @@ The Story object is passed from the parser to the other functions.
 
 ---
 
-## 4. Configuration (./config.py)
+## 4. Configuration (./core/config)
 
 #### 4.1 Configuration File
 

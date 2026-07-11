@@ -1,9 +1,8 @@
- 
+# Not implemented yet, but this file will contain the validation logic for story data.
 from itertools import count
 
 from core.ast.node import MacroNode
-from core.formats.format_definition import FormatDefinition
-from core.ast import Story, Passage, Node, TextNode, VariableNode, LinkNode, OperatorNode, MetaNode, LiteralNode, FormattingNode, HookNode
+from core.ast import Node, HookNode
 
 class TransformerError(Exception):
     def __init__(self, errors: list[str]):

@@ -26,5 +26,5 @@ __all__ = ["Node",
            "LiteralNode",
            "FormattingNode",
            "HookNode",
-              "HTMLNode"
+           "HTMLNode"
     ]
