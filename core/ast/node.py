@@ -17,7 +17,7 @@ class VariableNode(Node):
     
 @dataclass
 class HookNode(Node):
-    children: list[Node] | None = None  # Optional children nodes for hook content
+    children: list[Node]
     
 # container for macro's hook and content  
 @dataclass
