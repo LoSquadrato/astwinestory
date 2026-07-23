@@ -7,8 +7,8 @@ import re
 from itertools import count
 
 from core.formats import FormatDefinition
-from core.src.extractor import Extractor
-from core.src.regex_builder import RegexBuilder 
+from extractor import Extractor
+from regex_builder import RegexBuilder 
 from core.ast import (
     Node,
     Passage,
@@ -21,7 +21,8 @@ from core.ast import (
     LiteralNode,
     FormattingNode,
     MacroNode,
-    HTMLNode
+    HTMLNode,
+    HookNode
 )
 
 class ParsingError(Exception):
@@ -42,9 +43,9 @@ class Parser:
     def _next_id(self) -> int:
         return next(self._counter)
     
-    def _build_node(self, **kwargs) -> Node:
-        kind = kwargs.get("kind")
-        match = kwargs.get("match")
+    def _build_node(self, params: dict) -> Node:
+        kind = params["kind"]
+        match = params["match"]
         match kind:
             case "link":
                 display = match.group("link_display") if match.group("link_display") is not None else ""
@@ -52,9 +53,7 @@ class Parser:
                 return LinkNode(
                     node_id=self._next_id(),
                     display=display,
-                    children=self.parse_content(target, 
-                        self._patterns.build_node_content_pattern())
-                    )
+                    children=self.parse_content(target, self._patterns.build_node_content_pattern()) if target else []) 
             case "variable":
                 prefix = match.group("var_prefix")
                 name = match.group("var_name")
@@ -65,18 +64,21 @@ class Parser:
                     scope=scope
                 )
             case "macro":
-                macro_type = kwargs.get("macro_type")
-                children = kwargs.get("children")
-                hook = kwargs.get("hook") if "hook" in kwargs else None
+                macro_type = params["macro_type"]
+                children = params["children"]
+                hook = params["hook"] if "hook" in params else None
                 return MacroNode(
                     node_id=self._next_id(),
                     macro_type=macro_type,
                     children=self.parse_content(children, self._patterns.build_node_content_pattern()) if children else [],
-                    hook=self.parse_content(hook, self._patterns.build_node_content_pattern()) if hook else None
+                    hook=HookNode(
+                        node_id=self._next_id(),
+                        children=self.parse_content(hook, self._patterns.build_node_content_pattern()) if hook else []
+                    ) if hook else None
                 )
             case "html":
-                tag = kwargs.get("tag")
-                body = kwargs.get("body")
+                tag = params["tag"]
+                body = params["body"]
                 return HTMLNode(
                     node_id=self._next_id(),
                     tag=tag,
@@ -111,7 +113,9 @@ class Parser:
         passages= []
         for passage in passage_list:
             match = self.match_passage_first_line(passage)
-            passage_name = match.group("title") if match else None
+            if match is None:
+                raise ParsingError([f"Passage missing first line: {passage[:30]}..."])
+            passage_name = match.group("title")
             if passage_name is None:
                 raise ParsingError([f"Passage missing title: {passage[:30]}..."])
             if passage_name == "StoryTitle":
@@ -149,20 +153,15 @@ class Parser:
                 metadata=metadata,
                 children=[TextNode(node_id=self._next_id(), value=body)]
             )
-            
-        children = self.parse_content(
-            body, 
-            self._patterns.build_passage_content_pattern()
-        )
-        if not children:
-            children = [TextNode(node_id=self._next_id(), value="")] 
         return Passage(
             node_id=self._next_id(),
             name=name,
             tags=tags,
             metadata=metadata,
-            children=children
-        )
+            children = self.parse_content(
+            body, 
+            self._patterns.build_passage_content_pattern()
+        ))
         
     # TODO: Add a logic like macro extractor to parse the content of a html macro in SugarCube.
     # 
@@ -186,7 +185,7 @@ class Parser:
                 raise ParsingError([f"Regex match missing group: {match}"])
             args_builder = self.get_node_params(kind, match, text[pivot:])
             pivot += args_builder.get("offset", len(match.group(0)))
-            node = self._build_node(**args_builder)
+            node = self._build_node(args_builder)
             nodes.append(node)
         if pivot < len(text):
             nodes.append(TextNode(node_id=self._next_id(), value=text[pivot:]))

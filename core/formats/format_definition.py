@@ -37,37 +37,19 @@ class LinkDefinition(BaseModel):
 # Check if we can maintain the pydantic mapping or we need to create a func to convert JSON to FormatDefinition instance,
 # which also validate the format definition and raise error if invalid.
 class FormatDefinition(BaseModel):
-    model_config = ConfigDict(extra="allow")
     
     name:             str
     version:          str
     syntaxtype:       str
     variables:        VariableDefinition 
     links:            LinkDefinition
-    macros:           MacroDefinition = None
+    macros:           MacroDefinition | None = None
     operators:        dict[str, list[str]] = {}
     literals:         dict[str, list[str]] = {}
     formatting:       dict[str, list[str]] = {}
     meta:             dict[str, list[str]] = {}
-    html:             HtmlDefinition = None
+    html:             HtmlDefinition | None = None
     special_passages: list[str]            = []
-
-
-# todo: add getter methods for format definition fields, so we can handle missing fields gracefully in regex builder and content parser, 
-# instead of checking for None every time. For example, get_variables() can return an empty VariableDefinition if variables is None, 
-# so we can avoid checking for None in content parser when we want to check variable prefixes.
-    @model_validator(mode="after")
-    def validate_extra_fields(self) -> "FormatDefinition":
-        extras = self.model_extra or {}
-        for key, value in extras.items():
-            if not isinstance(value, dict):
-                raise ValueError(f"Field custom '{key}' deve essere dict[str, list[str]]")
-            for token, patterns in value.items():
-                if not isinstance(patterns, list) or not all(isinstance(p, str) for p in patterns):
-                    raise ValueError(
-                        f"Field custom '{key}.{token}' deve essere list[str]"
-                    )
-        return self
 
 
     def is_variable(self, token: str) -> bool:

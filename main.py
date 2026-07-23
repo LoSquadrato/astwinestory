@@ -2,23 +2,39 @@ import sys
 from rich.console import Console
 from pathlib import Path
 
-from core.cli import MenuOption, run_repl, file_loader    
+from command import HANDLERS_LIST, new_command_option, handle_command
+from core.cli import run_repl
+from core.config.config import MAX_STORY_SIZE
 from core.src import story_parsing, story_rendering
 from core.formats import load_format
 
-# Functions available in the REPL menu, for adding new functionalities, add a new MenuOption here with the corresponding key, label, and function to execute. 
-# Every function should accept a Story object and return a string.
-FUNCTIONS_LIST = [    
-    # MenuOption(key="convert", label="Convert variables and macros of a story from one format to another"),
-    # MenuOption(key="extract", label="Extract the text of a story while keeping macro placeholders", func=text_extractor),
-    MenuOption(key="render", label="[only for testing] Render the story text, write a file at output path", func=story_rendering, extension=".twee"),
-]
+# TODO:
+# - define builder class to build passage and nodes, and use it in the parser. Parser should make story and parse content
+# - function list must contain function objects not MenuOption
+# - refactor the pipeline: main.py + input_file -> repl -> input: format, function, output -> handle function -> output_file
+
 
 def validate_path(path: Path) -> None:
     if not path.exists():
         raise FileNotFoundError(f"Invalid or non-existent path: {path}")
     if path.suffix.lower() not in (".twee", ".tw"):
         raise ValueError(f"Invalid file extension '{path.suffix}' (expected .twee or .tw)")
+    
+# Validate file exists and size before reading
+def file_loader(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"Story not found or not a file: {path}")
+    size = path.stat().st_size
+    if size == 0:
+        raise ValueError("Input story is empty")
+    if size > MAX_STORY_SIZE:
+        raise ValueError(f"Input story exceeds maximum allowed size ({MAX_STORY_SIZE} bytes)")
+    with path.open("r", encoding="utf-8") as f:
+        raw = f.read()
+    if not raw:
+        raise ValueError("Unable to read story content")
+    return raw
+
 
 def main() -> None:
     if len(sys.argv) != 2:
@@ -37,35 +53,21 @@ def main() -> None:
     console = Console()
     
     try:
-        command = run_repl(source_path, console, FUNCTIONS_LIST)
+        command = new_command_option(run_repl(source_path, console, HANDLERS_LIST))
     except KeyboardInterrupt:
         print("\n\n  Interrupted by the user.\n")
         sys.exit(1)
+    except Exception as e:
+        print(f"Error during REPL: {e}")
+        sys.exit(1)
         
     print(f"\n  Processing...")
-        
+     
     try:
-        parsed_story, _ = story_parsing(
-            file_loader(source_path),
-            load_format(command["format"].key)
-            )
+        handle_command(command, file_loader(source_path))
     except Exception as e:
         console.print(f"[red]{e}[/]")
         sys.exit(1)
-    console.print("[green]Validation passed.[/]")
-    console.print(f"[blue]Title: {parsed_story.title}[/]")
-    console.print(f"[blue]Format: {parsed_story.format}[/]")
-    console.print(f"[blue]Passages: {len(parsed_story.passages)}[/]")
-    
-    
-    try:
-        result = command["function"].func(parsed_story)
-    except Exception as e:
-        console.print(f"[red]{e}[/]")
-        sys.exit(1)
-    with open(command["output_path"], "w", encoding="utf-8") as f:
-        f.write(result)
-    console.print(f"[green]Story rendered and saved to {command['output_path']}[/]")
 
 if __name__ == "__main__":
     main()

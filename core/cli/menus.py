@@ -1,17 +1,16 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import Any, List
+
 
 
 @dataclass
 class MenuOption:
     key: str
     label: str
-    func: callable = None  # Optional function to execute when this option is selected
-    extension: str = None  # Optional file extension associated with this option
 
-def _display_menu(title: str, options: List[MenuOption]) -> None:
+def _display_menu(title: str, options: Any) -> None:
     print(f"\n{'─' * 50}")
     print(f"  {title}")
     print(f"{'─' * 50}")
@@ -19,7 +18,7 @@ def _display_menu(title: str, options: List[MenuOption]) -> None:
         print(f"  [{i}]  {opt.label}")
     print(f"{'─' * 50}")
 
-def select_from_menu(title: str, options: List[MenuOption]) -> MenuOption:
+def select_from_menu(title: str, options: Any) -> MenuOption:
     while True:
         _display_menu(title, options)
         raw = input("  Choice: ").strip()
@@ -33,11 +32,11 @@ def select_from_menu(title: str, options: List[MenuOption]) -> MenuOption:
         
 def get_format_list(path: Path, format_list: List[MenuOption]) -> List[MenuOption]:
     if not path:
-        return format_list
+        raise ValueError("Path cannot be None or empty")
     try:
         list_dir = os.listdir(path)
     except OSError:
-        return format_list
+        raise ValueError(f"Invalid path: {path}")
     if not list_dir:
         return format_list
     for entry in list_dir:

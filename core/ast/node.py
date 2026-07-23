@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -17,20 +17,19 @@ class VariableNode(Node):
     
 @dataclass
 class HookNode(Node):
-    hooked_macro_id: int
-    children: list[Node] = field(default_factory=list)
+    children: list[Node] | None = None  # Optional children nodes for hook content
     
 # container for macro's hook and content  
 @dataclass
 class MacroNode(Node):
     macro_type: str
-    children: list[Node] = field(default_factory=list)
-    hook: HookNode = None  # Optional hook node for macro content
+    children: list[Node] | None = None  # Optional children nodes for macro content
+    hook: HookNode | None = None  # Optional hook node for macro content
 
 @dataclass
 class LinkNode(Node):
     display: str = ""
-    children: list[Node] = field(default_factory=list)
+    children: list[Node]| None = None
     
 @dataclass
 class OperatorNode(Node):
@@ -60,6 +59,6 @@ class Passage(Node):
     name:        str
     tags:        str
     metadata:    str
-    children:    list[Node] = field(default_factory=list)
+    children:    list[Node] | None = None  # Optional children nodes for passage content
 
 

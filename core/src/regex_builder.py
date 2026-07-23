@@ -37,26 +37,17 @@ class RegexBuilder:
     def available(self) -> list[str]:
         return list(self._patterns.keys())
     
-    def get_key_list(self, mode: str) -> list[str] | None:
+    def get_key_list(self, mode: str) -> list[str]:
         if mode == "passage":
             return ["macro", "html", "link", "variable", "meta", "formatting"]
         elif mode == "node":
             return ["variable", "macro", "html", "meta",  "operator", "literal", "formatting"]
         else:
-            return None
+            raise ValueError(f"Invalid mode: {mode}. Expected 'passage' or 'node'.")
             
 ######################################################################
     # Private builder func create pattern for every format field
 ######################################################################
-    # TODO: update pattern builder to include key group in the pattern, 
-    # so we can identify which pattern matched in the content parser
-    def _build_custom_patterns(self) -> dict[str, re.Pattern]:
-        result = {}
-        for field_name, field_data in self._fmt.model_extra.items():
-            tokens = [(re.compile(rf'|(?P<{field_name}>{re.escape(p)})')) for patterns in field_data.values() for p in patterns]
-            if tokens:
-                result[field_name] = re.compile("|".join(tokens))
-        return result
        
     
     def _build_variable_pattern(self) -> re.Pattern | None:
@@ -213,15 +204,23 @@ class RegexBuilder:
             re.MULTILINE
         )
         
-    def build_passage_content_pattern(self) -> re.Pattern | None:
-        return self.build_pattern(self.get_key_list("passage"))
+    def build_passage_content_pattern(self) -> re.Pattern:
+        pattern = self.build_pattern(self.get_key_list("passage"))
+        if pattern is None:
+            raise ValueError("No patterns available for passage content parsing.")
+        return pattern
     
-    def build_node_content_pattern(self) -> re.Pattern | None:
-        return self.build_pattern(self.get_key_list("node"))
+    def build_node_content_pattern(self) -> re.Pattern:
+        pattern = self.build_pattern(self.get_key_list("node"))
+        if pattern is None:
+            raise ValueError("No patterns available for node content parsing.")
+        return pattern
       
     def build_macro_content_pattern(self) -> re.Pattern | None:
         # after findind a macro start this pattern work with a stack based function 
         # to extract the whole macro content, including nested macros
+        if not self._fmt.macros:
+            return None
         op = self._fmt.macros.open
         cl = self._fmt.macros.close
         if not op or not cl:
@@ -244,6 +243,8 @@ class RegexBuilder:
     def build_html_content_pattern(self) -> re.Pattern | None:
         # after findind a html start this pattern work with a stack based function 
         # to extract the whole html content, including nested html
+        if not self._fmt.html:
+            return None
         op = self._fmt.html.open
         cl = self._fmt.html.close
         if not op or not cl:
