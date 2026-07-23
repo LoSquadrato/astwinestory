@@ -1,6 +1,8 @@
 import pytest
 import re
-from core.formats import load_format, FormatLoaderError, FormatDefinition
+from pydantic import ValidationError
+
+from core.formats import load_format, FormatDefinition
 from core.src.regex_builder import RegexBuilder
 
 
@@ -23,7 +25,7 @@ def test_empty_format_has_no_patterns():
         "variables": {"global_prefix": "", "local_prefix": ""},
         "links": {"open": "", "close": ""}       
     }
-    fmt = FormatDefinition(empty_syntax)
+    fmt = FormatDefinition.model_validate(empty_syntax)
     rb = RegexBuilder(fmt)
     assert rb.available() == []
     assert rb.build_pattern(["variable", "link", "macro"]) is None
@@ -31,8 +33,13 @@ def test_empty_format_has_no_patterns():
     assert rb.get("variable") is None
 
 def test_empty_format_raises_error():
-    with pytest.raises(FormatLoaderError):
-        FormatDefinition({"name": "Empty", "version": "1", "variables": None, "links": None})
+    with pytest.raises(ValidationError):
+        FormatDefinition.model_validate({
+            "name": "Empty",
+            "version": "1",
+            "variables": None,
+            "links": None,
+        })
         
 def test_combined_pattern_builder():
     fmt = load_format("SugarCube")

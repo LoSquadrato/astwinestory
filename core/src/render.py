@@ -11,6 +11,7 @@ from core.ast import (
     LiteralNode,
     FormattingNode,
     HTMLNode,
+    HookNode,
 )
 
 
@@ -26,7 +27,11 @@ class Render:
         self.story = story
         
 
-    def _render_node(self, content: List) -> str:
+    def _render_node(self, content: List | HookNode | None) -> str:
+        if isinstance(content, HookNode):
+            content = content.children
+        if content is None:
+            return ""
         if len(content) == 0:
             return ""
         nodes = ""
@@ -43,9 +48,7 @@ class Render:
                 case OperatorNode():
                     nodes += node.operator
                 case MetaNode():
-                    open = self.story.format.macros[node.kind][0]
-                    close = self.story.format.macros[node.kind][1]
-                    nodes += f"{open}{node.raw}{close}"
+                    nodes += self._render_meta(node)
                 case LiteralNode():
                     nodes += node.value
                 case FormattingNode():
@@ -53,12 +56,14 @@ class Render:
                 case HTMLNode():
                     nodes += node.body
                 case _:
-                    raise RenderingError(f"Unknown node type: {type(node)}")
+                    raise RenderingError([f"Unknown node type: {type(node)}"])
         return nodes   
                   
     
     def _render_story(self, story: Story):
         renderer_story = ""
+        if story.title:
+            renderer_story += f":: StoryTitle\n{story.title}\n\n"
         for passage in story.passages:
             renderer_story += self._render_passage(passage)
         return renderer_story
@@ -76,21 +81,27 @@ class Render:
         elif self.story.format.syntaxtype == "linear":
             return self._render_macro_linear(macro)
         else:
-            raise RenderingError(f"Unknown syntax type: {self.story.format.syntaxtype}")
+            raise RenderingError([f"Unknown syntax type: {self.story.format.syntaxtype}"])
     
     def _render_macro_markup(self, macro: MacroNode) -> str:
-        op = self.story.format.macros.open
-        cl = self.story.format.macros.close
-        cl_tag = self.story.format.macros.close_tag
+        macros = self.story.format.macros
+        if macros is None:
+            raise RenderingError(["Macro rendering requires a macro definition"])
+        op = macros.open
+        cl = macros.close
+        cl_tag = macros.close_tag
         ch = self._render_node(macro.children)
         hk = self._render_node(macro.hook) if macro.hook else ""
         if self.story.format.have_hook(macro.macro_type):
-            return f"{op}{macro.macro_type} {ch}{cl}{hk}{op}{cl_tag}{macro.macro_type}{ch}"
+            return f"{op}{macro.macro_type} {ch}{cl}{hk}{op}{cl_tag}{macro.macro_type}{cl}"
         return f"{op}{macro.macro_type} {ch}{cl}"
     
     def _render_macro_linear(self, macro: MacroNode) -> str:
-        op = self.story.format.macros.open
-        cl = self.story.format.macros.close
+        macros = self.story.format.macros
+        if macros is None:
+            raise RenderingError(["Macro rendering requires a macro definition"])
+        op = macros.open
+        cl = macros.close
         ch = self._render_node(macro.children)
         hk = self._render_node(macro.hook) if macro.hook else ""
         return f"{op}{macro.macro_type}{ch}{cl}{hk}"
@@ -110,11 +121,11 @@ class Render:
     def _render_meta(self, meta: MetaNode) -> str:
         tokens = self.story.format.get_meta_tokens(meta.kind)
         if not tokens:
-            raise RenderingError(f"Unknown meta kind: {meta.kind}")
+            raise RenderingError([f"Unknown meta kind: {meta.kind}"])
         open, close = tokens
         return f"{open}{meta.raw}{close}"
 
     
-def story_rendering(story: Story) -> Render:
+def story_rendering(story: Story) -> str:
     render = Render(story)
     return render._render_story(story)

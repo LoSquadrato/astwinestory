@@ -7,8 +7,8 @@ import re
 from itertools import count
 
 from core.formats import FormatDefinition
-from extractor import Extractor
-from regex_builder import RegexBuilder 
+from core.src.extractor import Extractor
+from core.src.regex_builder import RegexBuilder 
 from core.ast import (
     Node,
     Passage,
@@ -45,9 +45,9 @@ class Parser:
     
     def _build_node(self, params: dict) -> Node:
         kind = params["kind"]
-        match = params["match"]
         match kind:
             case "link":
+                match = params["match"]
                 display = match.group("link_display") if match.group("link_display") is not None else ""
                 target  = match.group("link_target") or match.group("link_inner")
                 return LinkNode(
@@ -55,6 +55,7 @@ class Parser:
                     display=display,
                     children=self.parse_content(target, self._patterns.build_node_content_pattern()) if target else []) 
             case "variable":
+                match = params["match"]
                 prefix = match.group("var_prefix")
                 name = match.group("var_name")
                 scope = "global_prefix" if prefix == self.format_def.variables.global_prefix else "local_prefix"
@@ -85,22 +86,26 @@ class Parser:
                     body=body
                 )
             case "operator":
+                match = params["match"]
                 return OperatorNode(
                     node_id=self._next_id(),
                     operator=match.group(0)
                 )
             case "meta":
+                match = params["match"]
                 return MetaNode(
                     node_id=self._next_id(),
                     kind=match.group("meta_prefix"),
                     raw=match.group("meta_content")
                 )
             case "literal":
+                match = params["match"]
                 return LiteralNode(
                     node_id=self._next_id(),
                     value=match.group(0)
                 )
             case "formatting":
+                match = params["match"]
                 return FormattingNode(
                     node_id=self._next_id(),
                     value=match.group(0)

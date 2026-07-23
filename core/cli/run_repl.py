@@ -6,6 +6,21 @@ from core.cli.menus import select_from_menu, get_format_list
 from core.config import FORMATS_DIR, MAX_STORY_SIZE, SUGGESTED_OUTPUT_DIR
 
 
+def file_loader(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"Story not found or not a file: {path}")
+    size = path.stat().st_size
+    if size == 0:
+        raise ValueError("Input story is empty")
+    if size > MAX_STORY_SIZE:
+        raise ValueError(f"Input story exceeds maximum allowed size ({MAX_STORY_SIZE} bytes)")
+    with path.open("r", encoding="utf-8") as file_handle:
+        raw = file_handle.read()
+    if not raw:
+        raise ValueError("Unable to read story content")
+    return raw
+
+
 
 def _validate_output_path(source: Path, name: str, ext: str) -> str:
     if not source.exists():

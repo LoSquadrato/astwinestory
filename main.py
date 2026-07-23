@@ -3,7 +3,7 @@ from rich.console import Console
 from pathlib import Path
 
 from command import HANDLERS_LIST, new_command_option, handle_command
-from core.cli import run_repl
+from core.cli import file_loader, run_repl
 from core.config.config import MAX_STORY_SIZE
 from core.src import story_parsing, story_rendering
 from core.formats import load_format
@@ -19,21 +19,6 @@ def validate_path(path: Path) -> None:
         raise FileNotFoundError(f"Invalid or non-existent path: {path}")
     if path.suffix.lower() not in (".twee", ".tw"):
         raise ValueError(f"Invalid file extension '{path.suffix}' (expected .twee or .tw)")
-    
-# Validate file exists and size before reading
-def file_loader(path: Path) -> str:
-    if not path.exists() or not path.is_file():
-        raise FileNotFoundError(f"Story not found or not a file: {path}")
-    size = path.stat().st_size
-    if size == 0:
-        raise ValueError("Input story is empty")
-    if size > MAX_STORY_SIZE:
-        raise ValueError(f"Input story exceeds maximum allowed size ({MAX_STORY_SIZE} bytes)")
-    with path.open("r", encoding="utf-8") as f:
-        raw = f.read()
-    if not raw:
-        raise ValueError("Unable to read story content")
-    return raw
 
 
 def main() -> None:

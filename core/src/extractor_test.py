@@ -81,7 +81,9 @@ def test_extract_linear_hook():
     fmt = load_format("Harlowe")
     extractor = Extractor(fmt, RegexBuilder(fmt))
     text = "[This is a hook.]"
-    content = extractor._extract_linear_content_stack(text, extractor._patterns.build_hook_content_pattern(), 0)
+    hook_pattern = extractor._patterns.build_hook_content_pattern()
+    assert hook_pattern is not None
+    content = extractor._extract_linear_content_stack(text, hook_pattern, 0)
     assert content == "[This is a hook.]"
     
 def test_extract_first_macro_match():
@@ -89,8 +91,9 @@ def test_extract_first_macro_match():
     extractor = Extractor(fmt, RegexBuilder(fmt))
     text = "(set: $lostTheSword to (either:true,false))"
     match = extractor._get_macro_first_match(text)
-    macro_type = match.group("opener").strip(fmt.macros.open)
     assert match is not None
+    assert fmt.macros is not None
+    macro_type = match.group("opener").strip(fmt.macros.open)
     assert match.group("opener") == "(set:"
     assert macro_type == "set:"
     
