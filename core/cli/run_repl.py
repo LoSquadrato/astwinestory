@@ -60,20 +60,8 @@ def _confirm_output_path(ext: str) -> str:
 
 
 def run_repl(path: Path, console: Console, func_lst: list) -> dict:
-    title = r'''
- $$$$$$\    $$\                                   $$\                                        
-$$  __$$\   $$ |                                  $$ |                                       
-$$ /  \__|$$$$$$\    $$$$$$\   $$$$$$\  $$\   $$\ $$ |      $$$$$$\   $$$$$$\  $$$$$$\$$$$\  
-\$$$$$$\  \_$$  _|  $$  __$$\ $$  __$$\ $$ |  $$ |$$ |     $$  __$$\ $$  __$$\ $$  _$$  _$$\ 
- \____$$\   $$ |    $$ /  $$ |$$ |  \__|$$ |  $$ |$$ |     $$ /  $$ |$$ /  $$ |$$ / $$ / $$ |
-$$\   $$ |  $$ |$$\ $$ |  $$ |$$ |      $$ |  $$ |$$ |     $$ |  $$ |$$ |  $$ |$$ | $$ | $$ |
-\$$$$$$  |  \$$$$  |\$$$$$$  |$$ |      \$$$$$$$ |$$$$$$$$\\$$$$$$  |\$$$$$$  |$$ | $$ | $$ |
- \______/    \____/  \______/ \__|       \____$$ |\________|\______/  \______/ \__| \__| \__|
-                                        $$\   $$ |                                           
-                                        \$$$$$$  |                                           
-                                         \______/                                            
-'''
-    console.print(title, style="bold cyan")
+    # add title ASCII art
+    # console.print(title, style="bold cyan")
     console.print(f"Using story: {path}", style="bold red")
     console.print("Please do not edit stories you do not own or have rights to.", style="bold red")
     

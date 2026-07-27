@@ -1,10 +1,7 @@
-# StoryLoom — CLI Editor for Interactive Stories
+# ASTS — Agnostic Serialization of Twine Stories
 
-StoryLoom is a tool for parsing, translating, and converting interactive stories in Twine (`.twee`) format.
-The idea is to provide a CLI for serializing stories into a JSON intermediate format, which can then be translated or processed and re-exported into `.twee` files.
+ASTS is a tool for parsing, translating, and converting interactive stories from native Twine (`.twee`) format to an intermediate AST (Abstract Syntax Tree) representation, which can then be serialized into a JSON format. This allows for easier translation and processing of stories, as well as conversion between different Twine formats.
 
----
-![StoryLoom](docs/Readme.png)
 
 ---
 
@@ -16,8 +13,8 @@ The idea is to provide a CLI for serializing stories into a JSON intermediate fo
 ### Installation
 
 ```shell
-git clone https://github.com/LoSquadrato/StoryLoom.git
-cd StoryLoom
+git clone https://github.com/LoSquadrato/astwinestory.git
+cd astwinestory
 ```
 Create a virtual environment and activate it:
 
@@ -33,7 +30,7 @@ pip install -r requirements.txt
 ```
 ### Usage
 
-Have a `.twee` file ready and the [format JSON file](##JSON-Library) of the story format inside the `core/assets/formats` folder, `cd` inside the StoryLoom root path, activate virtual enviroment (`source .venv/bin/activate`) then run the following command:
+Have a `.twee` file ready and the [format JSON file](##JSON-Library) of the story format inside the `core/assets/formats` folder, `cd` inside the astwinestory root path, activate virtual enviroment (`source .venv/bin/activate`) then run the following command:
 
 ```shell
 python3 main.py story.twee
@@ -45,9 +42,9 @@ REPL Input:
 * Select Output File Name (or use the one suggested by the program)
 
 ## WARNING:
-* StoryLoom is still in development and not yet stable. **Make a backup of your work before using it.** 
+* ASTS is still in development and not yet stable. **Make a backup of your work before using it.** 
 
-* **Edit only story that's are your own**, or that you have permission to modify. Every copyrighted work is protected by law, and StoryLoom is not responsible for any illegal use of the software.  
+* **Edit only story that's are your own**, or that you have permission to modify. Every copyrighted work is protected by law, and ASTS is not responsible for any illegal use of the software.  
 
 ---
 

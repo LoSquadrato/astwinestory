@@ -1,6 +1,6 @@
 ## Introduction:
 
-StoryLoom is a Python library designed to extract and process content from Twine stories. It provides tools for parsing Twine story formats, extracting macros, and handling nested content structures. Here's a brief overview of the key components and features of StoryLoom.
+ASTS is a Python library designed to extract and process content from Twine stories. It provides tools for parsing Twine story formats, extracting macros, and handling nested content structures. Here's a brief overview of the key components and features of ASTS.
 
 ---
 
@@ -15,7 +15,7 @@ StoryLoom is a Python library designed to extract and process content from Twine
 
 ## 1. Format Definitions (./core/assets/formats)
 
-Format definitions are JSON files that describe the structure and syntax of different Twine story formats. These definitions include information about macros, links, metadata, and other syntax elements. StoryLoom uses these definitions to parse and translate Twine stories.
+Format definitions are JSON files that describe the structure and syntax of different Twine story formats. These definitions include information about macros, links, metadata, and other syntax elements. ASTS uses these definitions to parse and translate Twine stories.
 
 #### 1.1 Example Format Definition (Harlowe 3.2.2)
 
@@ -90,11 +90,11 @@ Hooked macros are those that have hook while Plain macros are those that do not 
 
 #### 1.7 Meta
 
-Tags and metadata are used to provide additional information and coding control about the story or its content. They can be used to group passages, define story-wide settings, or provide other metadata that can be used by the story engine or by StoryLoom itself. In the FormatDefinition they are declared by a dictonary of list of strings. The key division and content are not used by the StoryLoom logic but can be handy for the user if he need to operate to a specific tag or metadata. Otherwise the metadata content pass every function without any change.
+Tags and metadata are used to provide additional information and coding control about the story or its content. They can be used to group passages, define story-wide settings, or provide other metadata that can be used by the story engine or by ASTS itself. In the FormatDefinition they are declared by a dictonary of list of strings. The key division and content are not used by the ASTS logic but can be handy for the user if he need to operate to a specific tag or metadata. Otherwise the metadata content pass every function without any change.
 
 #### 1.8 Html
 
-HTML tags are used to include raw HTML content in the story file. In the FormatDefinition they are declared by HtmlDefinition object. Open, Close and Close_tag are used to identify the html content, the Html_tag list don't have any use in the StoryLoom logic but can be handy for the user if he need to operate to a specific html tag. Otherwise the html content pass every function without any change.
+HTML tags are used to include raw HTML content in the story file. In the FormatDefinition they are declared by HtmlDefinition object. Open, Close and Close_tag are used to identify the html content, the Html_tag list don't have any use in the ASTS logic but can be handy for the user if he need to operate to a specific html tag. Otherwise the html content pass every function without any change.
 
 #### 1.9 Special Passages
 
@@ -102,15 +102,15 @@ Special passages are passage's names that are used for special and unique purpos
 
 #### 1.10 Operators, Literals, Formatting (WIP: and other fields):
 
-There's a lot of other syntax elements that can be defined in the FormatDefinition, such as operators, literals, formatting, and other syntax elements. These elements are used to define the structure and behavior of the Twine story content. In the FormatDefinition they are declared by a dictonary of list of strings. The key division and content are not used by the StoryLoom logic but can be handy for the user if he need to operate to a specific operator or literal. Otherwise the content pass every function without any change.
+There's a lot of other syntax elements that can be defined in the FormatDefinition, such as operators, literals, formatting, and other syntax elements. These elements are used to define the structure and behavior of the Twine story content. In the FormatDefinition they are declared by a dictonary of list of strings. The key division and content are not used by the ASTS logic but can be handy for the user if he need to operate to a specific operator or literal. Otherwise the content pass every function without any change.
 
-**WIP:** The implementation of these additional syntax elements is still in progress, and their usage may change in future versions of StoryLoom.
+**WIP:** The implementation of these additional syntax elements is still in progress, and their usage may change in future versions of ASTS.
 
 ---
 
 ## 2. Functions (./core/src)
 
-StoryLoom provides a set of functions to facilitate the extraction and processing of Twine story content. Function selection is provided through REPL input, allowing users to choose the desired operation interactively.
+ASTS provides a set of functions to facilitate the extraction and processing of Twine story content. Function selection is provided through REPL input, allowing users to choose the desired operation interactively.
 
 #### 2.1 Parser
 
@@ -206,15 +206,15 @@ The Story object is passed from the parser to the other functions.
 
 #### 4.1 Configuration File
 
-The configuration file is a Python file that contains various settings and parameters used by StoryLoom. It allows users to customize the behavior of the library, including specifying the paths to format definitions, setting default values for certain operations, and defining custom tags for text extraction and replacement.
+The configuration file is a Python file that contains various settings and parameters used by ASTS. It allows users to customize the behavior of the library, including specifying the paths to format definitions, setting default values for certain operations, and defining custom tags for text extraction and replacement.
 
 #### 4.2 Maximum Story Size (MAX_STORY_SIZE)
 
-The maximum story size setting defines the maximum byte size of a story that can be processed by StoryLoom. This setting helps prevent memory issues when working with large stories. That can be surpassed by the buffering functionality which will be implemented in the future.
+The maximum story size setting defines the maximum byte size of a story that can be processed by ASTS. This setting helps prevent memory issues when working with large stories. That can be surpassed by the buffering functionality which will be implemented in the future.
 
 #### 4.3 Format Definitions Path (FORMAT_DIR)
 
-The format definitions path setting specifies the directory where the JSON format definition files are located. StoryLoom uses this path to locate and load the appropriate format definitions for parsing and processing Twine stories.
+The format definitions path setting specifies the directory where the JSON format definition files are located. ASTS uses this path to locate and load the appropriate format definitions for parsing and processing Twine stories.
 
 #### 4.4 Text Extraction Tags (TEXT_EXCAPE_KEY)
 
@@ -222,5 +222,5 @@ The text extraction tags setting defines the markers used to identify and extrac
 
 #### 4.5 Suggested Output Path (SUGGESTED_OUTPUT_DIR)
 
-The suggested output path setting specifies the default directory where processed stories and other output files will be saved. This setting helps organize the output files generated by StoryLoom, making it easier for users to locate and manage their processed stories.
-In the REPL input the user define the file name, if its already exist StoryLoom will append a number to the file name to avoid overwriting existing files.
+The suggested output path setting specifies the default directory where processed stories and other output files will be saved. This setting helps organize the output files generated by ASTS, making it easier for users to locate and manage their processed stories.
+In the REPL input the user define the file name, if its already exist ASTS will append a number to the file name to avoid overwriting existing files.
