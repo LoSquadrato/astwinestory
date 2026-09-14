@@ -11,64 +11,21 @@ from dataclasses import dataclass
 from core.formats import FormatDefinition
 from src.extractor import Extractor
 from src.regex_builder import RegexBuilder 
+from src.node import (
+    Node,
+    TextNode,
+    VariableNode,
+    HookNode,
+    MacroNode,
+    LinkNode,
+    OperatorNode,
+    MetaNode,
+    HTMLNode,
+    LiteralNode,
+    FormattingNode,
+    Passage
+)
 
-@dataclass
-class Node:
-    node_id: int
-
-@dataclass
-class TextNode(Node):
-    value: str
-    
-@dataclass
-class VariableNode(Node):
-    name: str 
-    scope: str  # "global" or "local"
-    
-@dataclass
-class HookNode(Node):
-    children: list[Node]
-    
-# container for macro's hook and content  
-@dataclass
-class MacroNode(Node):
-    macro_type: str
-    children: list[Node] | None = None  # Optional children nodes for macro content
-    hook: HookNode | None = None  # Optional hook node for macro content
-
-@dataclass
-class LinkNode(Node):
-    display: str = ""
-    children: list[Node]| None = None
-    
-@dataclass
-class OperatorNode(Node):
-    operator: str
-
-@dataclass
-class MetaNode(Node):
-    kind: str
-    raw: str 
-    
-@dataclass
-class HTMLNode(Node):
-    tag: str
-    body: str = ""
-    
-@dataclass
-class LiteralNode(Node):
-    value: str
-    
-@dataclass
-class FormattingNode(Node):
-    value: str
-
-@dataclass
-class Passage():
-    title:        str
-    tags:        str
-    metadata:    str 
-    children:    list[Node] | None = None  # Optional children nodes for passage content
 
 @dataclass
 class Story:
@@ -202,6 +159,7 @@ class Parser:
         metadata = content_dict["metadata"] or ""
         children = self.parse_content(content_dict["body"], self._patterns.build_passage_content_pattern()) if content_dict["body"] else []
         return Passage(
+            node_id=self._next_id(),
             title=title,
             tags=tags,
             metadata=metadata,
