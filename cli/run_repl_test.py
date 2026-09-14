@@ -1,5 +1,5 @@
 import pytest
-from core.cli.run_repl import _validate_output_path, file_loader
+from cli.run_repl import _validate_output_path, file_loader
 from core.config import MAX_STORY_SIZE
 
 def test_validare_output_path(tmp_path):

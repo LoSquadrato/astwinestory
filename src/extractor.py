@@ -1,7 +1,7 @@
 import re
 
 from core.formats import FormatDefinition
-from core.src.regex_builder import RegexBuilder
+from src.regex_builder import RegexBuilder
 
 class ExtractorError(Exception):
     def __init__(self, errors: list[str]):

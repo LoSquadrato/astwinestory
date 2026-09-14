@@ -1,4 +1,4 @@
-from core.cli.menus import MenuOption, select_from_menu, get_format_list
+from cli.menus import MenuOption, select_from_menu, get_format_list
 
 
 def test_menu_selection_simple(monkeypatch, capsys):

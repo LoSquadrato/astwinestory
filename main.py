@@ -2,10 +2,11 @@ import sys
 from rich.console import Console
 from pathlib import Path
 
+from cli import file_loader
 from command import HANDLERS_LIST, new_command_option, handle_command
-from core.cli import file_loader, run_repl
+from core.cli import run_repl
 from core.config.config import MAX_STORY_SIZE
-from core.src import story_parsing, story_rendering
+from src import story_parsing, story_rendering
 from core.formats import load_format
 
 # TODO:

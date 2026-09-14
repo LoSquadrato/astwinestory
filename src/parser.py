@@ -1,29 +1,89 @@
-# TODO: dividiamo le macro in due gruppi: quelle che hanno un exit tag e quelle che non ce l'hanno. 
-# per la definizione delle prime è necessario sia presente anche il tag di chiusura, per le seconde no.
-# ES SugarCube: <<if>> <<print>> <<else>> <<print>> <</if>>  diventa in Harlowe: (if:)[(print:)] (else-if:)[(print:)]
+# Simplified parser for story formats
+# - add story field which contains the overall story structure
+# - export the split passage function, parser has to only parse the passage content
+# - 
 
-import textwrap
 import re
+import textwrap
 from itertools import count
+from dataclasses import dataclass
 
 from core.formats import FormatDefinition
-from core.src.extractor import Extractor
-from core.src.regex_builder import RegexBuilder 
-from core.ast import (
-    Node,
-    Passage,
-    Story,
-    TextNode,
-    VariableNode,
-    LinkNode,
-    OperatorNode,
-    MetaNode,
-    LiteralNode,
-    FormattingNode,
-    MacroNode,
-    HTMLNode,
-    HookNode
-)
+from src.extractor import Extractor
+from src.regex_builder import RegexBuilder 
+
+@dataclass
+class Node:
+    node_id: int
+
+@dataclass
+class TextNode(Node):
+    value: str
+    
+@dataclass
+class VariableNode(Node):
+    name: str 
+    scope: str  # "global" or "local"
+    
+@dataclass
+class HookNode(Node):
+    children: list[Node]
+    
+# container for macro's hook and content  
+@dataclass
+class MacroNode(Node):
+    macro_type: str
+    children: list[Node] | None = None  # Optional children nodes for macro content
+    hook: HookNode | None = None  # Optional hook node for macro content
+
+@dataclass
+class LinkNode(Node):
+    display: str = ""
+    children: list[Node]| None = None
+    
+@dataclass
+class OperatorNode(Node):
+    operator: str
+
+@dataclass
+class MetaNode(Node):
+    kind: str
+    raw: str 
+    
+@dataclass
+class HTMLNode(Node):
+    tag: str
+    body: str = ""
+    
+@dataclass
+class LiteralNode(Node):
+    value: str
+    
+@dataclass
+class FormattingNode(Node):
+    value: str
+
+@dataclass
+class Passage():
+    title:        str
+    tags:        str
+    metadata:    str 
+    children:    list[Node] | None = None  # Optional children nodes for passage content
+
+@dataclass
+class Story:
+    title:          str = ""
+    format:         FormatDefinition | None = None
+    format_version: str = ""
+    passages:       list[Passage] = []
+    
+    
+PASSAGE_FIRST_LINE_PATTERN = re.compile(
+            r'^::\s*(?P<title>[^\[\]{}\n]+?)\s*'
+            r'(?:\[(?P<tags>[^\]]*)\])?\s*'
+            r'(?:\{(?P<metadata>[^\}]*)\})?\s*$',
+            re.MULTILINE
+        )
 
 class ParsingError(Exception):
     def __init__(self, errors: list[str]):
@@ -33,11 +93,13 @@ class ParsingError(Exception):
         
         
 class Parser:
-    def __init__(self, format_def: FormatDefinition):
+    def __init__(self, format_def: FormatDefinition, document: str):
         self.format_def = format_def
         self._counter = count(1)
         self._patterns = RegexBuilder(format_def)
         self._extractor = Extractor(format_def, self._patterns)
+        self.story = Story()
+        self.document = document # Raw document content to be parsed it can be used in case of big data buffering?
         # self._build = Builder() -- da valutare, potrebbe tornare utile
         
     def _next_id(self) -> int:
@@ -113,60 +175,50 @@ class Parser:
             case _:
                 raise ParsingError([f"Unknown node type: {kind}"])
         
-    def parse_story(self, passage_list: list[str]) -> tuple[Story, int]:
-        title = "" 
-        passages= []
-        for passage in passage_list:
-            match = self.match_passage_first_line(passage)
-            if match is None:
+        
+    def parse_story(self) -> None:
+        passages = split_passage(self.document)
+        for passage in passages:
+            passage_metadata = self.parse_passage_first_line(passage)
+            if passage_metadata["title"] is None:
                 raise ParsingError([f"Passage missing first line: {passage[:30]}..."])
-            passage_name = match.group("title")
-            if passage_name is None:
-                raise ParsingError([f"Passage missing title: {passage[:30]}..."])
-            if passage_name == "StoryTitle":
-                title = passage[match.end():].strip().splitlines()[0].strip()
+            if passage_metadata["title"] == "StoryTitle":
+                self.story_title = passage_metadata["body"].strip().splitlines()[0].strip()
                 continue
             try:
-                passages.append(self.parse_passage(passage))
+                self.story.passages.append(self.parse_passage(passage_metadata))
             except ParsingError as e:
-                raise ParsingError([f"Error parsing passage '{title}':"] + e.errors)
-        return Story(
-            title=title,
-            format=self.format_def,
-            format_version=self.format_def.version,
-            passages=passages
-        ), self._next_id()
+                raise ParsingError([f"Error parsing passage '{passage_metadata['title']}':"] + e.errors)
+        self.story.title = self.story_title
+        self.story.format = self.format_def
+        self.story.format_version = self.format_def.version
 
 
-    def parse_passage(self, raw: str) -> Passage:
-        first_line = self.match_passage_first_line(raw)
-        if first_line is None:
-            raise ParsingError([f"Passage missing first line: {raw[:30]}..."])
-        name = first_line.group("title")
-        tags = first_line.group("tags") or ""
-        metadata = first_line.group("metadata") or ""
-        body = raw[first_line.end():].lstrip('\n')
-        if not name:
-            raise ParsingError([f"Passage missing title: {raw[:30]}..."])
-        # special passages are parsed as plain text, without looking for macros/links/variables,
-        # and stored as a single TextNode child of the Passage. This allows formats to define
-        if self.format_def.is_special_passage(name):
-            return Passage(
-                node_id=self._next_id(),
-                name=name,
-                tags=tags,
-                metadata=metadata,
-                children=[TextNode(node_id=self._next_id(), value=body)]
-            )
+    def parse_passage(self, content_dict: dict) -> Passage:
+        if content_dict["title"] is None:
+            raise ParsingError([f"Passage missing first line: {content_dict['body'][:30]}..."])
+        title = content_dict["title"]
+        tags = content_dict["tags"] or ""
+        metadata = content_dict["metadata"] or ""
+        children = self.parse_content(content_dict["body"], self._patterns.build_passage_content_pattern()) if content_dict["body"] else []
         return Passage(
-            node_id=self._next_id(),
-            name=name,
+            title=title,
             tags=tags,
             metadata=metadata,
-            children = self.parse_content(
-            body, 
-            self._patterns.build_passage_content_pattern()
-        ))
+            children=children
+        )
+        
+        
+    def parse_passage_first_line(self, text: str) -> dict:
+        pattern = re.compile(PASSAGE_FIRST_LINE_PATTERN)
+        match = pattern.search(text)
+        return {
+                "title": match.group("title") if match else "",
+                "tags": match.group("tags") if match else "",
+                "metadata": match.group("metadata") if match else "",
+                "body": text[match.end():] if match else ""
+        }
+        
         
     # TODO: Add a logic like macro extractor to parse the content of a html macro in SugarCube.
     # 
@@ -216,26 +268,17 @@ class Parser:
                 return key
         return None 
 
-    def match_passage_first_line(self, text: str) -> re.Match | None:
-        pattern = self._patterns.build_title_pattern()
-        if pattern is None:
-            raise ParsingError(["No patterns available for this format definition"])
-        match = pattern.search(text)
-        if match:
-            return match 
-        return None      
     
-    @staticmethod
-    def split_passage(text: str) -> list[str]:
-        text = textwrap.dedent(text)
-        if "::" in text and "\n" not in text:
-            raise ParsingError([
-                "The file contains '::' but no newline characters. "
-                "The Twee file may have been flattened into a single line."
-            ])
-        passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
-        passages_list = passage_cut.split(text)
-        return [passage for passage in passages_list if passage.strip()]
+def split_passage(text: str):
+    text = textwrap.dedent(text)
+    if "::" in text and "\n" not in text:
+        raise ParsingError([
+            "The file does not contain newline characters. "
+            "The Twee file may have been flattened into a single line."
+        ])
+    passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
+    return [passage for passage in passage_cut.split(text) if passage.strip()]
+
     
     
 def story_parsing(text: str, format_def: FormatDefinition) -> tuple[Story, int]:
