@@ -1,5 +1,5 @@
-from core.formats.format_definition import FormatDefinition
-from core.formats.format_loader import FormatLoaderError, load_format
+from cli.src.format_definition import FormatDefinition
+from cli.src.format_loader import FormatLoaderError, load_format
 
 __all__ = [
     "FormatDefinition",

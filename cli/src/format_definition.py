@@ -1,4 +1,7 @@
-from pydantic import BaseModel, ConfigDict, model_validator
+import json
+import os
+from src.utils import FORMATS_PATH
+from pydantic import BaseModel, ValidationError as PydanticValidationError
 
 
 class FormatDefinitionError(Exception):
@@ -6,11 +9,11 @@ class FormatDefinitionError(Exception):
         self.errors = errors
         message = "FormatDefinitionError:\n" + "\n".join(f"- {e}" for e in errors)
         super().__init__(message)
+        
 
 class VariableDefinition(BaseModel):
     global_prefix: str        # '$'
     local_prefix:  str        # '_'
-
 
 class MacroDefinition(BaseModel):
     open:       str                 # '<<' | '('
@@ -102,3 +105,64 @@ class FormatDefinition(BaseModel):
         if not self.macros or not self.macros.hooked:
             raise ValueError("FormatDefinition.macros.hooked is not defined")
         return self.macros.hooked
+    
+    # Get the subtype key for a given token based on its kind.
+    def get_token_subtype(self, field: str, token: str) -> tuple[str, int] | None:
+        if not token or not field:
+            return None
+        match field:
+            case "operator", "literal", "formatting", "meta":
+                if not hasattr(self, field) or not self.__dict__[field]:
+                    return None
+                for k, v in self.__dict__[field].items():
+                    if token in v:
+                        return (k, v.index(token))
+            case "macro":
+                if not self.macros or not self.macros.plain or not self.macros.hooked:
+                    return None
+                for k, v in self.macros.plain.items():
+                    if token in v:
+                        return ("plain."+ k, v.index(token))
+                for k, v in self.macros.hooked.items():
+                    if token in v:
+                        return ("hooked."+ k, v.index(token))
+            case _:
+                return None
+  
+# Format loading utilities
+    
+def load_format(format_name: str) -> FormatDefinition:
+    path = _resolve_path(format_name)
+    if not path:
+        raise FormatDefinitionError([f"Format definition not found for '{format_name}'."])
+    raw  = _read_json(path)
+    return _build_definition(raw)
+
+
+def _resolve_path(format_name: str) -> str:
+    normalized = format_name.lower().replace(" ", "_")
+    
+    candidates = [os.path.join(FORMATS_PATH, f"{normalized}.json")]
+
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+        
+    return ""
+
+
+def _read_json(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise FormatDefinitionError([f"Invalid JSON in format definition '{path}': {e}"])
+    except OSError as e:
+        raise FormatDefinitionError([f"Failed to read format definition '{path}': {e}"])
+
+
+def _build_definition(raw: dict) -> FormatDefinition:
+    try:
+        return FormatDefinition.model_validate(raw)
+    except PydanticValidationError as e:
+        raise FormatDefinitionError([f"Invalid format definition: {e}"]) from e

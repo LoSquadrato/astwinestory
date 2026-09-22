@@ -1,0 +1,80 @@
+{
+  "name": "Harlowe",
+  "version": "3",
+  "syntaxtype": "linear",
+
+  "variables": {
+    "global_prefix": "$",
+    "local_prefix": "_"
+  },
+
+  "macros": {
+    "open": "(",
+    "close": ")",
+    "close_tag": "",
+    "hook_open": "[",
+    "hook_close": "]",
+    "hooked": {
+      "control_opener": ["if:", "unless:"],
+      "control_continue": ["elseif:", "else:"],
+      "looping": ["for:"],
+      "output": ["link:", "click:", "link-repeat:", "replace:"],
+      "story": ["event:"],
+      "style": ["font:", "css:", "transition-arrive", "transition-depart"],
+      "assignment": ["append:"],
+      "timer": ["after:", "live:"]
+    },
+    "plain": {
+      "output":     ["print:", "display:", "show:"],
+      "assignment": ["set:", "put:", "move:", "unpack:"],
+      "media":      ["icon-rotate:", "icon-counter:"],
+      "meta":       ["story:", "startup:", "header:", "footer:", "debug-startup:"],
+      "containers": ["a:", "dm:", "ds:"]
+    }
+  },
+
+  "links": {
+    "open": "[[",
+    "close": "]]",
+    "separators": ["|"]
+  },
+
+  "operators": {
+    "assignment": ["to", "into"],
+    "arithmetic": ["+", "-", "*", "/"],
+    "comparison": ["is", "is not", "contains", "does not contain", "matches", ">", ">=", "<", "<="],
+    "logical":    ["and", "or", "not"]
+  },
+
+  "literals": {
+    "string_delimiters": ["\"", "'"],
+    "boolean": ["true", "false"],
+    "null": ["null"]
+  },
+
+  "formatting": {
+    "bold":          ["*", "*"],
+    "italic":        ["//", "//"],
+    "strikethrough": ["~~", "~~"],
+    "superscript":   ["^^", "^^"]
+  },
+
+  "meta": {
+    "image": ["[img[", "]]"],
+    "metadata": ["{", "}"],
+    "tag" : ["[", "]"]
+  },
+
+  "html": {
+    "open": "<",
+    "close": ">",
+    "close_tag": "/",
+    "html_tags": ["div", "span", "p", "script", "style"] 
+  },
+
+  "special_passages": [
+    "StoryData", "StoryTitle", "StoryBanner", "StoryInit",
+    "Start", "PassageHeader", "PassageFooter", "UserStylesheet", "UserScript",
+    "Modal code"
+  ]
+}

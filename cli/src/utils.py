@@ -1,14 +1,11 @@
 
 import os
 from pathlib import Path
-import re
-import textwrap
-from parser import ParsingError
 
 
 MAX_STORY_SIZE = 10 * 1024 * 1024  # 10 MB limit for input story
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 FORMATS_PATH = os.path.join(PROJECT_ROOT, "assets", "formats")
 
 TEXT_EXCAPE_KEY = "%%"
@@ -29,7 +26,7 @@ def load_story(path: Path):
 
 def get_format_list() -> list[str]:
     try:
-        formats = os.listdir(FORMATS_PATH)
+        formats = [file for file in os.listdir(FORMATS_PATH) if file.endswith(".json")]
     except OSError:
         raise ValueError(f"Invalid path: {FORMATS_PATH}")
     if not formats:

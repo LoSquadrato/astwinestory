@@ -1,7 +1,6 @@
 from typing import List
-from core.ast import (
+from node import (
     Passage,
-    Story,
     TextNode,
     VariableNode,
     MacroNode,

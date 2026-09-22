@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Callable
 
-from src.render import story_rendering
+from cli.src.render import story_rendering
 
 @dataclass
 class HandlerOption():

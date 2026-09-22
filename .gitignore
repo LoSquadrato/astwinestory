@@ -6,20 +6,11 @@ __pycache__*
 # generated files
 /cache
 /cache/*
-*.html
-*.json
-*.csv
-*.log
-*.zip
-*.story
-*.twee
-*.txt
 
 # tests
 *.ini
 
 # dev documentation
 /refactor.md
-
 
 

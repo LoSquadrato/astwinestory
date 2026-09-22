@@ -1,8 +1,8 @@
 # Not implemented yet, but this is where the conversion logic will go.
 from core.ast.node import FormattingNode, LinkNode, LiteralNode, MacroNode, MetaNode, OperatorNode, TextNode, VariableNode
-from core.formats.format_definition import FormatDefinition
+from cli.src.format_definition import FormatDefinition
 from core.ast import Story, Passage, Node
-from src.macro_transformer import Transformer
+from cli.src.macro_transformer import Transformer
 
 class ConverterError(Exception):
     def __init__(self, errors: list[str]):

@@ -6,7 +6,7 @@ from cli import file_loader
 from command import HANDLERS_LIST, new_command_option, handle_command
 from core.cli import run_repl
 from core.config.config import MAX_STORY_SIZE
-from src import story_parsing, story_rendering
+from cli.src import story_parsing, story_rendering
 from core.formats import load_format
 
 # TODO:
