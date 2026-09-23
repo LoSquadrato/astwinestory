@@ -1,8 +1,0 @@
-from core.config.config import FORMATS_DIR, MAX_STORY_SIZE, SUGGESTED_OUTPUT_DIR, TEXT_EXCAPE_KEY
-
-__all__ = [
-    "FORMATS_DIR",
-    "MAX_STORY_SIZE",
-    "SUGGESTED_OUTPUT_DIR",
-    "TEXT_EXCAPE_KEY"
-]

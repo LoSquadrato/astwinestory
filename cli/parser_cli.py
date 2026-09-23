@@ -1,4 +1,5 @@
 import argparse
+from src.parser import split_passage, Parser
 import src.format_definition as fmt
 from src.utils import load_story, get_format_list
 
@@ -37,7 +38,11 @@ def main():
             print(f"with format: {args.format}")
             format = fmt.load_format(args.format)
             story = load_story(args.story)
+            passages = split_passage(story)
+            parser = Parser(format, passages)
+            parser.parse_story()
             print(f"Story {args.story} parsed successfully with format {args.format}.")
+            print(f"Total passages parsed: {len(parser.parsed_passages)}")
 
         case _:
             parser.print_help()

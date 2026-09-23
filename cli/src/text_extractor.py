@@ -1,3 +1,4 @@
+# Not implemented yet, this module provides text extraction functionality for the story nodes.
 from utils import TEXT_EXCAPE_KEY
 from core.ast import (
     Story, 

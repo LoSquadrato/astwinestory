@@ -14,7 +14,8 @@ OUTPUT_DIR = "cache"
 
 
 
-def load_story(path: Path):
+def load_story(file_path: str):
+    path = Path(file_path)
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"Story not found or not a file: {path}")
     size = path.stat().st_size

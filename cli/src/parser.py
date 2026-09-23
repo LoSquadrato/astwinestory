@@ -8,9 +8,8 @@ import textwrap
 from itertools import count
 from dataclasses import dataclass
 
-from core.formats import FormatDefinition
-from cli.src.extractor import Extractor
-from cli.src.node import (
+from .format_definition import FormatDefinition
+from .node import (
     Node,
     TextNode,
     VariableNode,
@@ -24,27 +23,6 @@ from cli.src.node import (
     FormattingNode,
     Passage
 )
-
-# Story data structures.
-@dataclass
-class Story:
-    title:          str = ""
-    format:         FormatDefinition | None = None
-    format_version: str = ""
-    passages:       list[Passage] = []
-    
-# Regex pattern to identify and regroup the first line of a passage, including its title, tags, and metadata.
-PASSAGE_PATTERN = re.compile(
-            r'^::\s*(?P<title>[^\[\]{}\n]+?)\s*'
-            r'(?:\[(?P<tags>[^\]]*)\])?\s*'
-            r'(?:\{(?P<metadata>[^\}]*)\})?\s*$',
-            re.MULTILINE
-        )
-
-# Keys used to identify different types of content within a passage. 
-# These are used to determine which regex pattern to apply when parsing the passage content.
-PASSAGE_CONTENT_KEYS = ["macro", "html", "link", "variable", "meta", "formatting"]
-NODE_CONTENT_KEYS = ["variable", "macro", "html", "meta",  "operator", "literal", "formatting"]
 
 ################################################################################################################
 # RegexBuilder class is responsible for constructing regex patterns for different components 
@@ -237,6 +215,26 @@ class RegexBuilder:
  
 ##############################################################################################
 # Story parsing classes and error handling.
+# Story data structures.
+@dataclass
+class Story:
+    title:          str
+    format:         FormatDefinition
+    format_version: str
+    passages:       list[Passage]
+    
+# Regex pattern to identify and regroup the first line of a passage, including its title, tags, and metadata.
+PASSAGE_PATTERN = re.compile(
+            r'^::\s*(?P<title>[^\[\]{}\n]+?)\s*'
+            r'(?:\[(?P<tags>[^\]]*)\])?\s*'
+            r'(?:\{(?P<metadata>[^\}]*)\})?\s*$',
+            re.MULTILINE
+        )
+
+# Keys used to identify different types of content within a passage. 
+# These are used to determine which regex pattern to apply when parsing the passage content.
+PASSAGE_CONTENT_KEYS = ["macro", "html", "link", "variable", "meta", "formatting"]
+NODE_CONTENT_KEYS = ["variable", "macro", "html", "meta",  "operator", "literal", "formatting"]
 
 class ParsingError(Exception):
     def __init__(self, errors: list[str]):
@@ -250,7 +248,6 @@ class Parser:
         self._passages = passages
         self._counter = count(1)
         self._patterns = RegexBuilder(format_def)
-        self._extractor = Extractor(format_def, self._patterns)
         self.story_title = ""
         self.parsed_passages = []
          # Raw document content to be parsed it can be used in case of big data buffering?
@@ -361,7 +358,7 @@ class Parser:
                 return HTMLNode(
                     node_id=self._next_id(),
                     tag=match.group("html_tag"),
-                    body=match.group("html_body")
+                    body=match.group(0)
                 )
             case "operator":
                 return OperatorNode(
@@ -461,7 +458,76 @@ class Parser:
             continue
         pass
 
-    """
+   
+    ############################################################################################
+    # Regex pattern builders for different content types
+    
+    def build_pattern(self, keys: list[str]) -> re.Pattern:
+            parts = []
+            for key in keys:
+                pattern = self._patterns.get_pattern(key)
+                if pattern is not None:
+                    parts.append(f'(?P<{key}>{pattern.pattern})')
+            return re.compile(r'|'.join(parts), re.DOTALL)
+        
+          
+    def build_macro_content_pattern(self) -> re.Pattern | None:
+            # after findind a macro start this pattern work with a stack based function 
+            # to extract the whole macro content, including nested macros
+            if not self._fmt.macros:
+                return None
+            op = self._fmt.macros.open
+            cl = self._fmt.macros.close
+            if not op or not cl:
+                return None
+            if self._fmt.get_syntaxtype() == "markup":
+                close_tag = re.escape(self._fmt.macros.close_tag) if self._fmt.macros.close_tag else ""
+                macro_type = rf"(?:{close_tag})?\w[\w-]*:?"
+                return re.compile(
+                    rf"{re.escape(op)}(?P<macro_type>{macro_type})(?:\s+(?P<macro_inner>.*?))?{re.escape(cl)}",
+                    re.DOTALL
+                )
+            if self._fmt.get_syntaxtype() == "linear":
+                macro_type = rf"\w[\w-]*:?"
+                return re.compile(
+                    rf"(?P<opener>{re.escape(op)}{macro_type})|(?P<closer>{re.escape(cl)})",
+                    re.DOTALL
+                )
+            return None
+        
+    def build_html_content_pattern(self) -> re.Pattern | None:
+            # after findind a html start this pattern work with a stack based function 
+            # to extract the whole html content, including nested html
+            if not self._fmt.html:
+                return None
+            op = self._fmt.html.open
+            cl = self._fmt.html.close
+            if not op or not cl:
+                return None
+            close_tag = re.escape(self._fmt.html.close_tag) if self._fmt.html.close_tag else ""
+            html_type = rf"(?:{close_tag})?\w[\w-]*:?"
+            return re.compile(
+                rf"{re.escape(op)}(?P<html_tag>{html_type})(?:\s+(?P<html_inner>.*?))?{re.escape(cl)}",
+                re.DOTALL
+            )
+        
+    def build_hook_content_pattern(self) -> re.Pattern | None:
+            return self.build_pattern(["hook"])
+
+
+    
+def split_passage(text: str):
+    text = textwrap.dedent(text)
+    if "::" in text and "\n" not in text:
+        raise ParsingError([
+            "The file does not contain newline characters. "
+            "The Twee file may have been flattened into a single line."
+        ])
+    passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
+    return [passage for passage in passage_cut.split(text) if passage.strip()]
+
+
+"""
     # TODO: Add a logic like macro extractor to parse the content of a html macro in SugarCube.
     # 
     def parse_content(self, text: str, pattern: re.Pattern) -> list[Node]:
@@ -671,70 +737,3 @@ class Parser:
 # Methods for extracting hook, named hook, hidden hook, unclosed hook from linear syntax
 #########################################################################################
 """
-    ############################################################################################
-    # Regex pattern builders for different content types
-    
-    def build_pattern(self, keys: list[str]) -> re.Pattern:
-            parts = []
-            for key in keys:
-                pattern = self._patterns.get_pattern(key)
-                if pattern is not None:
-                    parts.append(f'(?P<{key}>{pattern.pattern})')
-            return re.compile(r'|'.join(parts), re.DOTALL)
-        
-          
-    def build_macro_content_pattern(self) -> re.Pattern | None:
-            # after findind a macro start this pattern work with a stack based function 
-            # to extract the whole macro content, including nested macros
-            if not self._fmt.macros:
-                return None
-            op = self._fmt.macros.open
-            cl = self._fmt.macros.close
-            if not op or not cl:
-                return None
-            if self._fmt.get_syntaxtype() == "markup":
-                close_tag = re.escape(self._fmt.macros.close_tag) if self._fmt.macros.close_tag else ""
-                macro_type = rf"(?:{close_tag})?\w[\w-]*:?"
-                return re.compile(
-                    rf"{re.escape(op)}(?P<macro_type>{macro_type})(?:\s+(?P<macro_inner>.*?))?{re.escape(cl)}",
-                    re.DOTALL
-                )
-            if self._fmt.get_syntaxtype() == "linear":
-                macro_type = rf"\w[\w-]*:?"
-                return re.compile(
-                    rf"(?P<opener>{re.escape(op)}{macro_type})|(?P<closer>{re.escape(cl)})",
-                    re.DOTALL
-                )
-            return None
-        
-    def build_html_content_pattern(self) -> re.Pattern | None:
-            # after findind a html start this pattern work with a stack based function 
-            # to extract the whole html content, including nested html
-            if not self._fmt.html:
-                return None
-            op = self._fmt.html.open
-            cl = self._fmt.html.close
-            if not op or not cl:
-                return None
-            close_tag = re.escape(self._fmt.html.close_tag) if self._fmt.html.close_tag else ""
-            html_type = rf"(?:{close_tag})?\w[\w-]*:?"
-            return re.compile(
-                rf"{re.escape(op)}(?P<html_tag>{html_type})(?:\s+(?P<html_inner>.*?))?{re.escape(cl)}",
-                re.DOTALL
-            )
-        
-    def build_hook_content_pattern(self) -> re.Pattern | None:
-            return self.build_pattern(["hook"])
-
-
-    
-def split_passage(text: str):
-    text = textwrap.dedent(text)
-    if "::" in text and "\n" not in text:
-        raise ParsingError([
-            "The file does not contain newline characters. "
-            "The Twee file may have been flattened into a single line."
-        ])
-    passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
-    return [passage for passage in passage_cut.split(text) if passage.strip()]
-

@@ -1,6 +1,6 @@
-# ASTS — Agnostic Serialization of Twine Stories
+# ASTWINESTORY — Agnostic Serialization of Twine Stories
 
-ASTS is a tool for parsing, translating, and converting interactive stories from native Twine (`.twee`) format to an intermediate AST (Abstract Syntax Tree) representation, which can then be serialized into a JSON format. This allows for easier translation and processing of stories, as well as conversion between different Twine formats.
+ASTWINESTORY is a tool for parsing, translating, and converting interactive stories from native Twine (`.twee`) format to an intermediate AST (Abstract Syntax Tree) representation, which can then be serialized into a JSON format. This allows for easier translation and processing of stories, as well as conversion between different Twine formats.
 
 
 ---
@@ -33,18 +33,13 @@ pip install -r requirements.txt
 Have a `.twee` file ready and the [format JSON file](##JSON-Library) of the story format inside the `core/assets/formats` folder, `cd` inside the astwinestory root path, activate virtual enviroment (`source .venv/bin/activate`) then run the following command:
 
 ```shell
-python3 main.py story.twee
+python3 cli/parser_cli.py parse {FORMAT} {STORY_FILE_PATH}
 ```
 
-REPL Input:
-* Select Output Format from the JSON file provided inside the `core/assets/formats` folder
-* Select Function from a list menu
-* Select Output File Name (or use the one suggested by the program)
-
 ## WARNING:
-* ASTS is still in development and not yet stable. **Make a backup of your work before using it.** 
+* ASTWINESTORY is still in development and not yet stable. **Make a backup of your work before using it.** 
 
-* **Edit only story that's are your own**, or that you have permission to modify. Every copyrighted work is protected by law, and ASTS is not responsible for any illegal use of the software.  
+* **Edit only story that's are your own**, or that you have permission to modify. Every copyrighted work is protected by law, and ASTWINESTORY is not responsible for any illegal use of the software.  
 
 ---
 
