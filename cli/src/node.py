@@ -3,6 +3,7 @@ from dataclasses import dataclass
 @dataclass
 class Node:
     node_id: int
+    node_type: str
 
 @dataclass
 class TextNode(Node):

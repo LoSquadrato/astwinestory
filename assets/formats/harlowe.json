@@ -36,7 +36,7 @@
   "links": {
     "open": "[[",
     "close": "]]",
-    "separators": ["|"]
+    "separators": ["|", "->"]
   },
 
   "operators": {
