@@ -3,6 +3,7 @@
 # - export the split passage function, parser has to only parse the passage content
 # - 
 
+import json
 import re
 import textwrap
 from itertools import count
@@ -465,6 +466,16 @@ def split_passage(text: str):
     passage_cut = re.compile(r"(?=^\s*::)", re.MULTILINE)
     return [passage for passage in passage_cut.split(text) if passage.strip()]
 
+def get_story_format(story : str) -> str:
+    # extract story data passage via the regex: (?<=:: StoryTitle)[\s\S]*?(?=::)
+    story_data_pattern = re.compile(r"(?<=:: StoryData)[\s\S]*?(?=::)")
+    match = story_data_pattern.search(story)
+    if not match:
+        raise ParsingError(["Story has no StoryData passage"])
+    data = json.loads(match.group(0))
+    if not "format" in data:
+        raise ParsingError(["StoryData passage does not contain a 'format' field"])
+    return data["format"]
 
 """
     Deprecated macro content extractor class. Now we extract macro after node parsing.

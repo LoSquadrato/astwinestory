@@ -1,6 +1,6 @@
 import argparse
 
-from src.parser import split_passage, Parser
+from src.parser import split_passage, Parser, get_story_format
 import src.format_definition as fmt
 from src.utils import load_story, get_format_list, OUTPUT_DIR, parsed_passages_to_json
 
@@ -16,7 +16,6 @@ def main():
     format_parser = subparsers.add_parser("list-formats", help="List available formats")
     
     parse_parser = subparsers.add_parser("parse", help="Parse the story file")
-    parse_parser.add_argument("format", help="name of the format to parse")
     parse_parser.add_argument("story", help="path to the story file")
     
     args = parser.parse_args()
@@ -36,13 +35,13 @@ def main():
         
         case "parse":
             print(f"Parsing story: {args.story[-20:]}")
-            print(f"with format: {args.format}")
-            format = fmt.load_format(args.format)
             story = load_story(args.story)
+            format_name = get_story_format(story)
+            format = fmt.load_format(format_name)
             passages = split_passage(story)
             parser = Parser(format, passages)
             parser.parse_story()
-            print(f"Story {args.story} parsed successfully with format {args.format}.")
+            print(f"Story {args.story} parsed successfully with format {format_name}.")
             print(f"Total passages parsed: {len(parser.parsed_passages)}")
             parsed_passages_to_json(parser.parsed_passages, parser.story_title)
 
