@@ -75,14 +75,22 @@ She makes an awful gurgling noise as her lungs are pureed, and then turns to dus
     assert isinstance(nodes[0], MacroNode)
     assert nodes[0].hook is not None
     assert isinstance(nodes[0].hook, HookNode)
+    assert nodes[0].hook.children is not None
+    nested_macro = next(node for node in nodes[0].hook.children if isinstance(node, MacroNode))
+    assert nested_macro.hook is not None
     
     
 def test_nested_meta():
-    text = '[Maggie whirls around. I blink and her |knives>[knives] are in her hands.]'
+    text = '[outer {middle [inner] end} tail]'
     format = load_format("harlowe")
     parser = Parser(format, [text])
     nodes = parser.parse_content(text, parser.build_pattern(PASSAGE_CONTENT_KEYS))
     nodes = parser.group_by_linear_nodes(nodes)
     assert nodes is not None
-    assert isinstance(nodes[0], MetaNode) or isinstance(nodes[0], MetaNode)
-    assert MetaNode in [type(node) for node in nodes]
+    assert isinstance(nodes[0], MetaNode)
+    assert nodes[0].children is not None
+    nested_meta = next(node for node in nodes[0].children if isinstance(node, MetaNode))
+    assert nested_meta.kind == "{"
+    assert nested_meta.children is not None
+    deepest_meta = next(node for node in nested_meta.children if isinstance(node, MetaNode))
+    assert deepest_meta.kind == "["

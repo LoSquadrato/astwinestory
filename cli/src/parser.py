@@ -5,7 +5,7 @@
 
 from enum import Enum
 import json
-import re
+import regex as re
 import textwrap
 from itertools import count
 from dataclasses import dataclass
@@ -176,17 +176,34 @@ class RegexBuilder:
     def _build_meta_pattern(self) -> re.Pattern | None:
         if not self._fmt.meta:
             return None
-        opens = []
-        closes = []
-        for tokens in self._fmt.meta.values():
-            opens.append(re.escape(tokens[0]))
-            closes.append(re.escape(tokens[1]))
-        if not opens or not closes:
+        pairs = [
+            (re.escape(tokens[0]), re.escape(tokens[1]))
+            for tokens in self._fmt.meta.values()
+            if len(tokens) >= 2 and tokens[0] and tokens[1]
+        ]
+        if not pairs:
             return None
+
+        delimiter_pattern = "(?:" + "|".join(sorted(
+            {token for pair in pairs for token in pair},
+            key=len,
+            reverse=True
+        )) + ")"
+        quote_patterns = [
+            rf'{re.escape(tokens[0])}(?:\\[\s\S]|(?!{re.escape(tokens[0])})[\s\S])*{re.escape(tokens[0])}'
+            for tokens in self._fmt.quote.values()
+            if tokens and tokens[0]
+        ]
+        body_parts = [r"(?&balanced_meta)"]
+        if quote_patterns:
+            body_parts.append("(?:" + "|".join(quote_patterns) + ")")
+        body_parts.append(rf"(?!{delimiter_pattern})[\s\S]")
+        body = "(?:" + "|".join(body_parts) + ")*"
+        pair_patterns = [f"{opener}{body}{closer}" for opener, closer in pairs]
         return re.compile(
-            rf'(?P<meta_prefix>{"|".join(opens)})'
-            rf'(?P<meta_content>.*?)'
-            rf'(?P<meta_suffix>{"|".join(closes)})', re.DOTALL)
+            rf"(?P<balanced_meta>(?:{'|'.join(pair_patterns)}))",
+            re.DOTALL
+        )
         
         
     # Build HTML pattern based on format definition: 
@@ -305,11 +322,31 @@ class Parser:
                     operator=match.group(0)
                 )
             case "meta":
-                meta_content = match.group("meta_content")
+                meta_value = match.group("meta")
+                meta_pairs = sorted(
+                    (
+                        (tokens[0], tokens[1])
+                        for tokens in self._fmt.meta.values()
+                        if len(tokens) >= 2 and tokens[0] and tokens[1]
+                    ),
+                    key=lambda pair: len(pair[0]),
+                    reverse=True
+                )
+                meta_pair = next(
+                    (
+                        pair for pair in meta_pairs
+                        if meta_value.startswith(pair[0]) and meta_value.endswith(pair[1])
+                    ),
+                    None
+                )
+                if meta_pair is None:
+                    raise ParsingError([f"Could not identify meta delimiters: {meta_value}"])
+                meta_prefix, meta_suffix = meta_pair
+                meta_content = meta_value[len(meta_prefix):-len(meta_suffix)]
                 return MetaNode(
                     node_type=node_type,
                     node_id=self._next_id(),
-                    kind=match.group("meta_prefix"),
+                    kind=meta_prefix,
                     children=self.parse_content(meta_content, self.build_pattern(METADATA_CONTENT_KEYS)) if meta_content else []
                 )
             case "literal":
@@ -398,10 +435,6 @@ class Parser:
                 if match.start() > pivot:
                     nodes.append(TextNode(node_id=self._next_id(), node_type="text", value=text[pivot:match.start()]))
                     pivot = match.start()
-                if self._get_node_type_from_match(match) == "meta":
-                    nodes.append(self.iter_meta_node(text[match.start():]))
-                    pivot = match.end()
-                    continue
                 nodes.append(self._build_node(match))
                 pivot = match.end()
             if pivot < len(text):
@@ -423,17 +456,6 @@ class Parser:
 ###############################################################################################
 ## Grouping macros for nodes based on syntax type (markup or linear)
 ###############################################################################################
-
-    def iter_meta_node(self, text: str) -> MetaNode:
-        stack = []
-        matches = self.build_pattern(["meta"]).finditer(text)
-        if not matches:
-            raise ParsingError([f"Expected MetaNode, got: {text}"])
-        for match in matches:
-            if match.group() != 0:
-                continue
-            return MetaNode(node_id=self._next_id(), node_type="meta", value=match.group("meta"))
-        raise ParsingError([f"Expected MetaNode, got: {text}"])
 
     def group_by_children(self, nodes: list[Node]) -> list[Node]|None:
         pass
@@ -466,7 +488,7 @@ class Parser:
                         children=self.group_by_linear_nodes(next_node.children)
                         )
                 else:
-                    raise ParsingError([f"Expected HookNode with children after hook macro, got: {next_node}"])
+                    raise ParsingError([f"Expected HookNode with children after hook macro {node}, got: {next_node}"])
             formatted_nodes.append(node)
             pivot += 1
         return formatted_nodes
