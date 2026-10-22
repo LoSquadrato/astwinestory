@@ -47,9 +47,8 @@
   },
 
   "literals": {
-    "string_delimiters": ["\"", "'"],
     "boolean": ["true", "false"],
-    "null": ["null"]
+    "null": ["null", "Null", "none"]
   },
 
   "formatting": {
@@ -60,7 +59,6 @@
   },
 
   "meta": {
-    "image": ["[img[", "]]"],
     "metadata": ["{", "}"],
     "tag" : ["[", "]"]
   },
@@ -70,6 +68,11 @@
     "close": ">",
     "close_tag": "/",
     "html_tags": ["div", "span", "p", "script", "style"] 
+  },
+
+  "quote": {
+    "double": ["\""],
+    "single": ["'"]
   },
 
   "special_passages": [

@@ -3,6 +3,7 @@
 # - export the split passage function, parser has to only parse the passage content
 # - 
 
+from enum import Enum
 import json
 import re
 import textwrap
@@ -46,7 +47,7 @@ class RegexBuilder:
             "formatting":      self._build_formatting_pattern,
             "meta":            self._build_meta_pattern,
             "html":            self._build_html_pattern,
-            "hook":            self._build_linear_hook_pattern
+            "quote":           self._build_quoted_string_pattern
         }
         for key, builder in builders.items():
             pattern = builder()
@@ -125,6 +126,8 @@ class RegexBuilder:
             )
           
             
+    # TODO: operator whose find in macro with text like (go-to: "16 More Ways to Kill a Vampire"),
+    # Add an escape for words inside double quotes
     # Build operator pattern based on format definition: 
     # define a group for each operator
     def _build_operator_pattern(self) -> re.Pattern | None:
@@ -150,7 +153,7 @@ class RegexBuilder:
         )
         if not lits:
             return None
-        return re.compile(r'|'.join(rf'{re.escape(lit)}(\w.*?){re.escape(lit)}' for lit in lits))
+        return re.compile(r'|'.join(re.escape(lit) for lit in lits))
 
 
 
@@ -200,19 +203,17 @@ class RegexBuilder:
             re.DOTALL
         )
         
-    # Build linear hook pattern based on format definition: 
-    # define groups for hook opener and closer
-    def _build_linear_hook_pattern(self) -> re.Pattern | None:
-        if not self._fmt.macros:
+    def _build_quoted_string_pattern(self) -> re.Pattern | None:
+        if not self._fmt.quote:
             return None
-        op = self._fmt.macros.hook_open
-        cl = self._fmt.macros.hook_close
-        if not op or not cl:
+        delimiters = [re.escape(tokens[0]) for tokens in self._fmt.quote.values()]
+        delimiter_pattern = "|".join(delimiters)
+        if not delimiter_pattern:
             return None
         return re.compile(
-                rf"(?P<opener>{re.escape(op)})|(?P<closer>{re.escape(cl)})",
-                re.DOTALL
-            )
+            rf'(?P<quote_delimiter>{delimiter_pattern})(?P<quote_content>.*?)(?P=quote_delimiter)',
+            re.DOTALL
+        )
  
 ##############################################################################################
 # Story parsing classes and error handling.
@@ -230,12 +231,14 @@ PASSAGE_PATTERN = re.compile(
             r'(?:\[(?P<tags>[^\]]*)\])?\s*'
             r'(?:\{(?P<metadata>[^\}]*)\})?\s*$',
             re.MULTILINE
-        )
+        )  
 
 # Keys used to identify different types of content within a passage. 
 # These are used to determine which regex pattern to apply when parsing the passage content.
-PASSAGE_CONTENT_KEYS = ["macro", "html", "link", "variable", "meta", "formatting"]
-NODE_CONTENT_KEYS = ["variable", "macro", "html", "meta",  "operator", "literal", "formatting"]
+PASSAGE_CONTENT_KEYS = ["macro", "link", "meta", "html", "variable", "formatting", "quote"]
+MACRO_CONTENT_KEYS = ["variable", "operator", "literal", "quote"]
+LINK_CONTENT_KEYS = ["variable"]
+METADATA_CONTENT_KEYS = ["macro", "meta", "variable", "formatting", "quote"]
 
 class ParsingError(Exception):
     def __init__(self, errors: list[str]):
@@ -267,7 +270,7 @@ class Parser:
                     node_id=self._next_id(),
                     node_type=node_type,
                     display=display,
-                    children=self.parse_content(target, self.build_pattern(NODE_CONTENT_KEYS)) if target else []) 
+                    children=self.parse_content(target, self.build_pattern(LINK_CONTENT_KEYS)) if target else []) 
             case "variable":
                 prefix = match.group("var_prefix")
                 name = match.group("var_name")
@@ -285,7 +288,7 @@ class Parser:
                     node_id=self._next_id(),
                     node_type=node_type,
                     macro_type=macro_type,
-                    children=self.parse_content(macro_inner, self.build_pattern(NODE_CONTENT_KEYS)) if macro_inner else [],
+                    children=self.parse_content(macro_inner, self.build_pattern(MACRO_CONTENT_KEYS)) if macro_inner else [],
                     hook=None
                 )
             case "html":
@@ -302,11 +305,12 @@ class Parser:
                     operator=match.group(0)
                 )
             case "meta":
+                meta_content = match.group("meta_content")
                 return MetaNode(
                     node_type=node_type,
                     node_id=self._next_id(),
                     kind=match.group("meta_prefix"),
-                    raw=match.group("meta_content")
+                    children=self.parse_content(meta_content, self.build_pattern(METADATA_CONTENT_KEYS)) if meta_content else []
                 )
             case "literal":
                 return LiteralNode(
@@ -320,8 +324,15 @@ class Parser:
                     node_id=self._next_id(),
                     value=match.group(0)
                 )
+            case "quote":
+                return TextNode(
+                    node_id=self._next_id(),
+                    node_type=node_type,
+                    value=match.group("quote_content")
+                )
             case _:
                 raise ParsingError([f"Unknown node type: {node_type}"])
+        
         
     def _get_node_type_from_match(self, match: re.Match) -> str | None:
             if match is None:
@@ -359,7 +370,7 @@ class Parser:
             title=content_dict["title"],
             tags=content_dict["tags"] or "",
             metadata=content_dict["metadata"] or "",
-            children=self.parse_content(content_dict["body"], regex_pattern) if content_dict["body"] else []
+            children=self.group_by_children(self.parse_content(content_dict["body"], regex_pattern))
         )
         
     # Parse individual passage from the raw text.
@@ -377,8 +388,8 @@ class Parser:
     # find matches for macros, links, variables, media pass them to _build_node, 
     # and recursively parse_macro_nodes for macros    
     def parse_content(self, text: str, pattern: re.Pattern) -> list[Node]:
-            if pattern is None:
-                raise ParsingError(["No patterns available for this format definition"])
+            if not text:
+                return []
             nodes = [] 
             pivot = 0
             for match in pattern.finditer(text):
@@ -387,17 +398,16 @@ class Parser:
                 if match.start() > pivot:
                     nodes.append(TextNode(node_id=self._next_id(), node_type="text", value=text[pivot:match.start()]))
                     pivot = match.start()
+                if self._get_node_type_from_match(match) == "meta":
+                    nodes.append(self.iter_meta_node(text[match.start():]))
+                    pivot = match.end()
+                    continue
                 nodes.append(self._build_node(match))
                 pivot = match.end()
             if pivot < len(text):
                 nodes.append(TextNode(node_id=self._next_id(), node_type="text", value=text[pivot:]))
             return nodes
     
-    def group_by_children(self, nodes: list[Node]) -> list[Node]|None:
-        for node in nodes:
-            continue
-        pass
-
    
     ############################################################################################
     # Regex pattern builders for different content types
@@ -409,51 +419,57 @@ class Parser:
                 if pattern is not None:
                     parts.append(f'(?P<{key}>{pattern.pattern})')
             return re.compile(r'|'.join(parts), re.DOTALL)
-        
-          
-    def build_macro_content_pattern(self) -> re.Pattern | None:
-            # after findind a macro start this pattern work with a stack based function 
-            # to extract the whole macro content, including nested macros
-            if not self._fmt.macros:
-                return None
-            op = self._fmt.macros.open
-            cl = self._fmt.macros.close
-            if not op or not cl:
-                return None
-            if self._fmt.get_syntaxtype() == "markup":
-                close_tag = re.escape(self._fmt.macros.close_tag) if self._fmt.macros.close_tag else ""
-                macro_type = rf"(?:{close_tag})?\w[\w-]*:?"
-                return re.compile(
-                    rf"{re.escape(op)}(?P<macro_type>{macro_type})(?:\s+(?P<macro_inner>.*?))?{re.escape(cl)}",
-                    re.DOTALL
-                )
-            if self._fmt.get_syntaxtype() == "linear":
-                macro_type = rf"\w[\w-]*:?"
-                return re.compile(
-                    rf"(?P<opener>{re.escape(op)}{macro_type})|(?P<closer>{re.escape(cl)})",
-                    re.DOTALL
-                )
-            return None
-        
-    def build_html_content_pattern(self) -> re.Pattern | None:
-            # after findind a html start this pattern work with a stack based function 
-            # to extract the whole html content, including nested html
-            if not self._fmt.html:
-                return None
-            op = self._fmt.html.open
-            cl = self._fmt.html.close
-            if not op or not cl:
-                return None
-            close_tag = re.escape(self._fmt.html.close_tag) if self._fmt.html.close_tag else ""
-            html_type = rf"(?:{close_tag})?\w[\w-]*:?"
-            return re.compile(
-                rf"{re.escape(op)}(?P<html_tag>{html_type})(?:\s+(?P<html_inner>.*?))?{re.escape(cl)}",
-                re.DOTALL
-            )
-        
-    def build_hook_content_pattern(self) -> re.Pattern | None:
-            return self.build_pattern(["hook"])
 
+###############################################################################################
+## Grouping macros for nodes based on syntax type (markup or linear)
+###############################################################################################
+
+    def iter_meta_node(self, text: str) -> MetaNode:
+        stack = []
+        matches = self.build_pattern(["meta"]).finditer(text)
+        if not matches:
+            raise ParsingError([f"Expected MetaNode, got: {text}"])
+        for match in matches:
+            if match.group() != 0:
+                continue
+            return MetaNode(node_id=self._next_id(), node_type="meta", value=match.group("meta"))
+        raise ParsingError([f"Expected MetaNode, got: {text}"])
+
+    def group_by_children(self, nodes: list[Node]) -> list[Node]|None:
+        pass
+        if not nodes:
+            return None
+        match self._fmt.get_syntaxtype():
+            case "markup":
+                return self.group_by_markup_nodes(nodes)
+            case "linear":
+                return self.group_by_linear_nodes(nodes)
+        return nodes
+    
+    def group_by_markup_nodes(self, nodes: list[Node]) -> list[Node]:
+            # TODO:Implement markup-specific grouping logic here if needed
+            return nodes
+            
+        
+    def group_by_linear_nodes(self, nodes: list[Node]) -> list[Node]:
+        formatted_nodes = []
+        pivot = 0
+        while pivot < len(nodes):
+            node = nodes[pivot]
+            if isinstance(node, MacroNode) and self._fmt.have_hook(node.macro_type):
+                pivot += 1
+                next_node = nodes[pivot] if pivot < len(nodes) else None
+                if next_node and isinstance(next_node, MetaNode) and next_node.children:
+                    node.hook = HookNode(
+                        node_id=next_node.node_id, 
+                        node_type="hook", 
+                        children=self.group_by_linear_nodes(next_node.children)
+                        )
+                else:
+                    raise ParsingError([f"Expected HookNode with children after hook macro, got: {next_node}"])
+            formatted_nodes.append(node)
+            pivot += 1
+        return formatted_nodes
 
     
 def split_passage(text: str):
@@ -476,214 +492,3 @@ def get_story_format(story : str) -> str:
     if not "format" in data:
         raise ParsingError(["StoryData passage does not contain a 'format' field"])
     return data["format"]
-
-"""
-    Deprecated macro content extractor class. Now we extract macro after node parsing.
-    # 
-    def parse_content(self, text: str, pattern: re.Pattern) -> list[Node]:
-        if pattern is None:
-            raise ParsingError(["No patterns available for this format definition"])
-        # find matches for macros, links, variables, media pass them to _build_node, 
-        # and recursively parse_macro_nodes for macros
-        nodes = [] 
-        pivot = 0
-        for match in pattern.finditer(text):
-            if match.start() < pivot:
-                continue  
-            if match.start() > pivot:
-                raw_text = text[pivot:match.start()]
-                # TODO: DRY this and use build_node also for text node
-                nodes.append(TextNode(node_id=self._next_id(), value=raw_text))
-                pivot = match.start()
-            kind = self._get_match_type(match)
-            if kind is None:
-                raise ParsingError([f"Parse content can't matching node type: {match}"])
-            node_contents = self.extract_node_contents(kind, match, text[pivot:])
-            pivot += node_contents.get("offset", len(match.group(0)))
-            nodes.append(self._build_node(node_contents))
-        if pivot < len(text):
-            nodes.append(TextNode(node_id=self._next_id(), value=text[pivot:]))
-        # define macro groups for parsing macro's hook or macro content       
-        return nodes
-    
-    
-    def extract_node_contents(self, kind: str, match: re.Match, text: str) -> dict:
-        if self._fmt.get_syntaxtype() == "markup" and kind == "macro":
-            return self._extractor.get_macro_params_markup(text)
-        if self._fmt.get_syntaxtype() == "linear" and kind == "macro":
-            return self._extractor.get_macro_params_linear(text)
-        if kind == "html":
-            return self._extractor.get_html_params(text)
-        return {"kind": kind, "match": match}
-     
-    
-#############################################################################
-# Method for extracting macro parameters in markup syntax type
-#############################################################################
-    
-    def get_macro_params_markup(self, text: str) -> dict:
-        match = self._get_macro(text)
-        if not match:
-            raise ParsingError([f"Failed to extract macro from text: {text}"])
-        macro_type = match.group("macro_type")
-        if macro_type is None:
-            raise ParsingError([f"Regex match missing group: {match}"])
-        children = match.group("macro_inner")
-        if self._fmt.have_hook(macro_type):
-            hook_content, closer = self._extract_full_markup_macro_content(macro_type, text[match.end():])
-            return {
-                "offset": match.end() + len(hook_content) + len(closer),
-                "kind": "macro", 
-                "macro_type": macro_type, 
-                "children": children,
-                "hook": hook_content
-                }
-        else:
-            return {
-                "offset": match.end(),
-                "kind": "macro", 
-                "macro_type": macro_type, 
-                "children": children,
-                }
-            
-    def _extract_full_markup_macro_content(self, opener_type: str, text: str) -> tuple[str, str] | None:
-            stack = 1
-            for match in self._patterns.build_macro_content_pattern().finditer(text):
-                macro_type = match.group("macro_type")
-                if macro_type is None:
-                    raise ParsingError([f"Regex match missing group: {match}"])
-                if macro_type == self._fmt.macros.close_tag + opener_type:
-                    stack -= 1
-                if macro_type == opener_type:
-                    stack += 1
-                if stack == 0:
-                    return text[:match.start()], match.group(0) 
-            raise ParsingError([f"Unmatched macro opener: {opener_type}"])  # No matching closing tag found
-    
-    
-    def _get_macro(self, text: str) -> re.Match | None:
-            match = self.build_pattern(["macro"]).match(text)
-            return match if match else None
-        
-    def _get_macro_first_match(self, text: str) -> re.Match | None:
-            pattern = self.build_macro_content_pattern()
-            if pattern is None:
-                return None
-            match = pattern.search(text)
-            return match
-#############################################################################
-# Method for linear syntax type
-#############################################################################
-    
-    def get_macro_params_linear(self, text: str) -> dict:
-        params = self._get_macro_and_children_params(text)
-        pivot = params["pivot"]
-        macro_type = params["macro_type"]
-        children = params["children"]
-        hook = self._get_hook(text[pivot:], macro_type)
-        return {
-                "offset": pivot + (len(hook) if hook else 0),  # +1 for the hook opener parenthesis
-                "kind": "macro", 
-                "macro_type": macro_type, 
-                "children": children[:-1],  # Exclude the closing tag from children
-                "hook": self._strip_hook_parenthesis(hook) if hook else "" 
-                }
-        
-    def _get_macro_and_children_params(self, text: str) -> dict:
-        match = self._get_macro_first_match(text)
-        if not match:
-            raise ParsingError([f"Failed to extract linear macro from text: {text}"])          
-        macro_type = (match.group("opener")).strip(self._fmt.macros.open)
-        if macro_type is None:
-            raise ParsingError([f"Regex match missing group: {match}"])
-        pivot = match.end()
-        children = self._extract_linear_content_stack(
-            text[pivot:], self._patterns.build_macro_content_pattern(), 1)
-        pivot += len(children)
-        return {"macro_type": macro_type, "children": children, "pivot": pivot}
-           
-    def _get_hook(self, text: str, macro_type: str) -> re.Match | None:
-        if self._fmt.is_control_macro_opener(macro_type):
-            return self._extract_linear_control_content(text)
-        elif self._fmt.have_hook(macro_type):
-            return self._extract_linear_content_stack(text, self._patterns.build_hook_content_pattern(), 0)
-        else:
-            return ""
-        
-    def _strip_hook_parenthesis(self, hook: str) -> str:
-        if hook.startswith(self._fmt.macros.hook_open) and hook.endswith(self._fmt.macros.hook_close):
-            return hook[1:-1]  # Remove the opening and closing parenthesis
-        else:
-            raise ParsingError([f"Hook does not have proper parenthesis: {hook}"])
-     
-    def _extract_linear_content_stack(self, text: str, pattern: re.Pattern, stack: int) -> str:
-        match_list = list(pattern.finditer(text))
-        if not match_list:
-            raise ParsingError([f"Failed to extract linear content from text: {text}"])
-        for match in match_list:
-            if match.groupdict().get("opener"):
-                stack += 1
-            elif match.groupdict().get("closer"):
-                stack -= 1
-            if stack == 0:
-                return text[:match.end()]
-        raise ParsingError([f"Unmatched linear opener"])
-        
-    
-    def _extract_linear_control_content(self, text: str) -> str:
-        hook = self._extract_linear_content_stack(text, self._patterns.build_hook_content_pattern(), 0)
-        remaining = text[len(hook):]
-        next_match = self._get_macro(remaining)
-        if next_match is None or not self._fmt.is_control_macro_continue(next_match.group("macro_type")):
-            return hook
-        else:
-            params = self._get_macro_and_children_params(remaining)
-        return (
-            hook
-            + remaining[:params["pivot"]]
-            + self._extract_linear_control_content(remaining[params["pivot"]:])
-        )
-
-    
-#############################################################################
-# Method for html content extraction
-#############################################################################     
-    
-    def get_html_params(self, text: str) -> dict:
-        match = self._get_html_tag(text)
-        if not match:
-            raise ParsingError([f"Failed to extract html macro from text: {text}"])
-        html_tag = match.group("html_tag")
-        if html_tag is None:
-            raise ParsingError([f"Regex match missing group: {match}"])
-        html_content = self._extract_full_html_content(html_tag, text[match.end():])
-        return {
-            "offset": len(match.group(0)) + len(html_content),
-            "kind": "html", 
-            "tag": html_tag, 
-            "body": match.group(0) + html_content
-            }
-    
-    def _get_html_tag(self, text: str) -> re.Match | None:
-        match = self._patterns.build_pattern(["html"]).match(text)
-        return match if match else None
-    
-    def _extract_full_html_content(self, opener_tag: str, text: str) -> str:
-        stack = 1
-        for match in self._patterns.build_html_content_pattern().finditer(text):
-            html_tag = match.group("html_tag")
-            if html_tag is None:
-                raise ParsingError([f"Regex match missing group: {match}"])
-            if html_tag == self._fmt.html.close_tag + opener_tag:
-                stack -= 1
-            if html_tag == opener_tag:
-                stack += 1
-            if stack == 0:
-                return text[:match.end()]  # Return the content between opener and closer
-        raise ParsingError([f"Unmatched html tag opener: {opener_tag}"])  # No matching closing tag found
-    
-    
-########################################################################################
-# Methods for extracting hook, named hook, hidden hook, unclosed hook from linear syntax
-#########################################################################################
-"""

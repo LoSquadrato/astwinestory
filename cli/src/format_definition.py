@@ -51,6 +51,7 @@ class FormatDefinition(BaseModel):
     literals:         dict[str, list[str]] = {}
     formatting:       dict[str, list[str]] = {}
     meta:             dict[str, list[str]] = {}
+    quote:            dict[str, list[str]] = {}
     html:             HtmlDefinition | None = None
     special_passages: list[str]            = []
 

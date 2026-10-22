@@ -37,7 +37,7 @@ class OperatorNode(Node):
 @dataclass
 class MetaNode(Node):
     kind: str
-    raw: str 
+    children: list[Node] | None = None
     
 @dataclass
 class HTMLNode(Node):
